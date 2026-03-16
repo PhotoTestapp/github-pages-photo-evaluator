@@ -191,38 +191,6 @@
     border-color: var(--accent-border);
     box-shadow: 0 0 0 3px rgba(232,255,71,0.08);
   }
-  .launch-card {
-    background: linear-gradient(135deg, rgba(232,255,71,0.08), rgba(96,165,250,0.08));
-    border: 1px solid var(--accent-border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-  .launch-row {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .launch-item {
-    flex: 1 1 220px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-  }
-  .launch-label {
-    display: block;
-    font-size: 0.72rem;
-    color: var(--text-dim);
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .launch-value {
-    font-size: 0.88rem;
-    color: var(--text);
-    word-break: break-word;
-  }
   .launch-warning {
     display: none;
     background: var(--red-dim);
@@ -236,11 +204,6 @@
   }
   .launch-warning.active {
     display: block;
-  }
-  .launch-recommend {
-    margin-top: 10px;
-    color: var(--text-muted);
-    font-size: 0.78rem;
   }
 
   /* ── ドロップゾーン ── */
@@ -595,6 +558,26 @@
     color: var(--text-dim);
     line-height: 1.6;
   }
+  .delivery-inline {
+    margin-top: 18px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+  .delivery-inline.success {
+    border-color: rgba(74,222,128,0.25);
+    background: var(--green-dim);
+    color: var(--green);
+  }
+  .delivery-inline.error {
+    border-color: rgba(248,113,113,0.25);
+    background: var(--red-dim);
+    color: var(--red);
+  }
 
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(12px); }
@@ -795,57 +778,21 @@
 <div id="page-evaluate" class="page active">
   <div class="container">
     <h1 class="page-title">写真を評価する / 起動対象ファイル</h1>
-    <p class="page-sub">この画面は正式な起動先です。PCではローカル起動スクリプト、iPhoneではHTTPS公開URLから開いてください。構図・明るさ・ピントなど7項目でスコアリングします</p>
+    <p class="page-sub">写真を選ぶと評価後にGoogle Driveへ自動保存します。構図・明るさ・ピントなど7項目でスコアリングします</p>
     <p class="page-sub note">JPG・JPEG・PNG・WebP・HEIFに対応します。HEIFはお使いのブラウザによってはプレビューや解析ができない場合があります。</p>
 
     <div id="launch-warning" class="launch-warning"></div>
 
-    <div class="launch-card">
-      <div class="launch-row">
-        <div class="launch-item">
-          <span class="launch-label">起動モード</span>
-          <span class="launch-value" id="launch-mode">確認中...</span>
-        </div>
-        <div class="launch-item">
-          <span class="launch-label">Webhook URL</span>
-          <span class="launch-value" id="webhook-status-view">確認中...</span>
-        </div>
-      </div>
-      <p class="launch-recommend">推奨: PCは `start-local-app` で起動、iPhoneはHTTPSで公開したこのHTMLをSafariで開き、必要ならホーム画面に追加してください。</p>
-    </div>
-
     <div class="settings-card">
-      <p class="settings-title">送信設定 / 起動固定版</p>
-      <p class="settings-sub">評価完了後にWebhookへ画像と評価結果をPOSTし、Google Apps Script側でDrive保存やメール送信を行います。資格情報はHTMLに保持しません。</p>
+      <p class="settings-title">Google Drive自動保存</p>
+      <p class="settings-sub">この版は Drive のみに送信します。評価完了後は自動で保存され、必要なときだけ手動再送信できます。</p>
       <div class="settings-row">
         <div class="settings-field">
           <label class="settings-label" for="webhook-url">Webhook URL</label>
-          <input class="settings-input" id="webhook-url" type="url" value="https://script.google.com/macros/s/AKfycbyBeavKTziPWneYuiiLNTgVuTTajtjGJeRp29-4VuPG86c3Xis91t7duj_-oB4d6eIgWA/exec" placeholder="https://script.google.com/macros/s/.../exec">
-        </div>
-        <div class="settings-field">
-          <label class="settings-label" for="webhook-key">Webhook Key（任意）</label>
-          <input class="settings-input" id="webhook-key" type="text" placeholder="secret-key">
+          <input class="settings-input" id="webhook-url" type="url" value="https://script.google.com/macros/s/AKfycbyBeavKTziPWneYuiiLNTgVuTTajtjGJeRp29-4VuPG86c3Xis91t7duj_-oB4d6eIgWA/exec" readonly>
         </div>
       </div>
-      <div class="settings-row">
-        <div class="settings-field">
-          <label class="settings-label" for="delivery-email">宛先メールアドレス</label>
-          <input class="settings-input" id="delivery-email" type="email" placeholder="name@example.com">
-        </div>
-        <div class="settings-field">
-          <label class="settings-label" for="delivery-target">送信先種別</label>
-          <select class="settings-input" id="delivery-target">
-            <option value="both">Drive + Email</option>
-            <option value="drive">Driveのみ</option>
-            <option value="email">Emailのみ</option>
-          </select>
-        </div>
-        <label class="settings-check">
-          <input id="auto-send-toggle" type="checkbox">
-          評価完了後に自動送信
-        </label>
-      </div>
-      <p class="settings-hint">送信時は画像を長辺1920pxのJPEGへ変換し、ファイル名・評価結果・作成日時と合わせて送信します。</p>
+      <p class="settings-hint">送信先はGoogle Drive固定です。送信時は画像を長辺1920pxのJPEGへ変換し、ファイル名・評価結果・作成日時と合わせて保存します。</p>
     </div>
 
     <!-- ドロップゾーン -->
@@ -892,7 +839,7 @@
         <p class="result-title">✦ 評価結果</p>
         <div class="result-actions">
           <a class="btn-secondary" id="download-result-photo" href="#" download>画像を保存</a>
-          <button class="btn-reset" id="manual-send-btn" onclick="sendLatestRecord()">Webhook送信</button>
+          <button class="btn-reset" id="manual-send-btn" onclick="sendLatestRecord()">Driveへ再送信</button>
           <button class="btn-reset" onclick="resetAll()">新しく評価</button>
         </div>
       </div>
@@ -1095,11 +1042,14 @@ function getDeliveryStatus(record) {
 
 function readDeliverySettings() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.deliverySettings) || '{"webhookUrl":"","webhookKey":"","email":"","target":"both","autoSend":false}');
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.deliverySettings) || '{"webhookUrl":"","webhookKey":"","email":"","target":"drive","autoSend":true}');
     if (!parsed.webhookUrl) parsed.webhookUrl = DEFAULT_WEBHOOK_URL;
+    parsed.email = '';
+    parsed.target = 'drive';
+    parsed.autoSend = true;
     return parsed;
   } catch {
-    return { webhookUrl: DEFAULT_WEBHOOK_URL, webhookKey: '', email: '', target: 'both', autoSend: false };
+    return { webhookUrl: DEFAULT_WEBHOOK_URL, webhookKey: '', email: '', target: 'drive', autoSend: true };
   }
 }
 
@@ -1108,7 +1058,6 @@ function writeDeliverySettings() {
     const settings = collectDeliverySettings();
     if (!settings.webhookUrl) settings.webhookUrl = DEFAULT_WEBHOOK_URL;
     localStorage.setItem(STORAGE_KEYS.deliverySettings, JSON.stringify(settings));
-    updateLaunchStatus(settings.webhookUrl);
   } catch (error) {
     console.warn('Failed to save delivery settings', error);
     showError('送信設定の保存に失敗しました');
@@ -1118,66 +1067,41 @@ function writeDeliverySettings() {
 function applyDeliverySettings() {
   const settings = readDeliverySettings();
   document.getElementById('webhook-url').value = settings.webhookUrl || DEFAULT_WEBHOOK_URL;
-  document.getElementById('webhook-key').value = settings.webhookKey || '';
-  document.getElementById('delivery-email').value = settings.email || '';
-  document.getElementById('delivery-target').value = settings.target || 'both';
-  document.getElementById('auto-send-toggle').checked = Boolean(settings.autoSend);
-  updateLaunchStatus(document.getElementById('webhook-url').value.trim());
 }
 
 function collectDeliverySettings() {
   return {
     webhookUrl: document.getElementById('webhook-url').value.trim(),
-    webhookKey: document.getElementById('webhook-key').value.trim(),
-    email: document.getElementById('delivery-email').value.trim(),
-    target: document.getElementById('delivery-target').value,
-    autoSend: document.getElementById('auto-send-toggle').checked,
+    webhookKey: '',
+    email: '',
+    target: 'drive',
+    autoSend: true,
   };
 }
 
 function validateDeliverySettings(settings) {
   if (!settings.webhookUrl) return 'Webhook URLを入力してください';
   if (!/^https?:\/\//.test(settings.webhookUrl)) return 'Webhook URLの形式が正しくありません';
-  if ((settings.target === 'email' || settings.target === 'both') && !settings.email) {
-    return 'メール送信先の宛先メールアドレスを入力してください';
-  }
-  if ((settings.target === 'email' || settings.target === 'both') && !isValidEmail(settings.email)) {
-    return '宛先メールアドレスの形式が正しくありません';
-  }
   return '';
 }
 
-function updateLaunchStatus(webhookUrl = '') {
-  const modeEl = document.getElementById('launch-mode');
-  const webhookEl = document.getElementById('webhook-status-view');
+function updateLaunchWarning() {
   const warningEl = document.getElementById('launch-warning');
+  if (!warningEl) return;
   const protocol = window.location.protocol;
   const host = window.location.hostname;
   const isFile = protocol === 'file:';
   const isLocalServer = protocol === 'http:' && (host === '127.0.0.1' || host === 'localhost');
   const isHostedHttps = protocol === 'https:';
-  const isSupported = isLocalServer || isHostedHttps;
 
-  if (modeEl) {
-    modeEl.textContent = isLocalServer
-      ? 'Local Server'
-      : isHostedHttps
-        ? 'Hosted Web App (iPhone対応)'
-        : (isFile ? 'File Direct Open' : `Unsupported (${window.location.origin || protocol})`);
-  }
-  if (webhookEl) {
-    webhookEl.textContent = webhookUrl || DEFAULT_WEBHOOK_URL;
-  }
-
-  if (!warningEl) return;
   if (isFile) {
     warningEl.classList.add('active');
-    warningEl.innerHTML = 'このHTMLは直接開かないでください。PCはローカル起動スクリプト、iPhoneはHTTPS公開URLから開いてください。`file://` 直開きではWebhook送信に失敗しやすくなります。';
+    warningEl.textContent = 'このHTMLは直接開かないでください。PCはローカル起動スクリプト、iPhoneはHTTPS公開URLから開いてください。';
     return;
   }
-  if (!isSupported) {
+  if (!isLocalServer && !isHostedHttps) {
     warningEl.classList.add('active');
-    warningEl.innerHTML = 'このページはPCではローカルHTTPサーバー、iPhoneではHTTPS公開URLから開いてください。現在のURLでは安定動作を保証できません。';
+    warningEl.textContent = 'このページはPCではローカルHTTPサーバー、iPhoneではHTTPS公開URLから開いてください。';
     return;
   }
   warningEl.classList.remove('active');
@@ -1218,7 +1142,7 @@ function updateActionLinks(record = null) {
 
   if (sendButton) {
     sendButton.disabled = !latestResultRecord || sendingRecordId === latestResultRecord.id;
-    sendButton.textContent = sendingRecordId === latestResultRecord?.id ? '送信中...' : 'Webhook送信';
+    sendButton.textContent = sendingRecordId === latestResultRecord?.id ? '送信中...' : 'Driveへ再送信';
   }
 }
 
@@ -1236,8 +1160,8 @@ document.getElementById('file-input').addEventListener('change', event => {
   event.target.value = '';
 });
 
-['webhook-url', 'webhook-key', 'delivery-email', 'delivery-target', 'auto-send-toggle'].forEach(id => {
-  document.getElementById(id).addEventListener(id === 'auto-send-toggle' || id === 'delivery-target' ? 'change' : 'input', writeDeliverySettings);
+['webhook-url'].forEach(id => {
+  document.getElementById(id).addEventListener('input', writeDeliverySettings);
 });
 
 const dropzone = document.getElementById('dropzone');
@@ -1827,7 +1751,7 @@ async function sendRecordToWebhook(record) {
       throw new Error(data?.message ? `Webhookレスポンスエラー: ${data.message}` : `Webhookレスポンスエラー: HTTP ${response.status}`);
     }
 
-    const requiresDrive = settings.target === 'drive' || settings.target === 'both';
+    const requiresDrive = true;
     if (!data?.success) {
       throw new Error(data?.driveError ? `Webhookレスポンスエラー: ${data.driveError}` : `Webhookレスポンスエラー: ${data?.message || 'Webhook処理に失敗しました'}`);
     }
@@ -1967,43 +1891,17 @@ function buildMetaLine(record) {
 
 function buildDeliveryHtml(record) {
   const delivery = record.delivery || {};
-  const status = getDeliveryStatus(record);
   const isSending = sendingRecordId === record.id;
-  const successMessage = delivery.savedToDrive
-    ? 'Google Driveへ保存済みです'
-    : (delivery.emailed ? 'メール送信済みです' : '');
-  return `
-    <div class="delivery-card">
-      <div class="delivery-top">
-        <p class="delivery-title">Delivery</p>
-        <span class="delivery-pill ${status.className}">${escapeHtml(status.label)}</span>
-      </div>
-      <div class="delivery-meta">
-        <div class="delivery-meta-item">
-          <span class="delivery-meta-label">送信先</span>
-          <span class="delivery-meta-value">${escapeHtml(delivery.destination || delivery.target || collectDeliverySettings().target || 'both')}</span>
-        </div>
-        <div class="delivery-meta-item">
-          <span class="delivery-meta-label">送信日時</span>
-          <span class="delivery-meta-value">${delivery.sentAt ? escapeHtml(formatDate(delivery.sentAt)) : '未送信'}</span>
-        </div>
-        <div class="delivery-meta-item">
-          <span class="delivery-meta-label">Drive</span>
-          <span class="delivery-meta-value">${delivery.driveUrl ? `<a href="${escapeHtml(delivery.driveUrl)}" target="_blank" rel="noopener noreferrer">保存先を開く</a>` : (delivery.savedToDrive ? '保存済み' : '未保存')}</span>
-        </div>
-        <div class="delivery-meta-item">
-          <span class="delivery-meta-label">Email</span>
-          <span class="delivery-meta-value">${delivery.emailed ? '送信済み' : '未送信'}</span>
-        </div>
-      </div>
-      <div class="delivery-actions">
-        <button class="btn-secondary" onclick="sendRecordById(${record.id})" ${isSending ? 'disabled' : ''}>${isSending ? '送信中...' : '再送信する'}</button>
-      </div>
-      ${(delivery.sendError || delivery.error)
-        ? `<p class="delivery-note">失敗理由: ${escapeHtml(delivery.sendError || delivery.error)}</p>`
-        : `<p class="delivery-note">${escapeHtml(successMessage || 'Webhook URL・送信先設定を更新したあとでも、この結果から再送信できます。')}</p>`}
-    </div>
-  `;
+  if (isSending) {
+    return '<div class="delivery-inline">Google Driveへ送信中...</div>';
+  }
+  if (delivery.sendError || delivery.error) {
+    return `<div class="delivery-inline error">Drive保存に失敗しました。${escapeHtml(delivery.sendError || delivery.error)}</div>`;
+  }
+  if (delivery.savedToDrive && delivery.driveUrl) {
+    return `<div class="delivery-inline success">Google Driveへ保存しました。<a href="${escapeHtml(delivery.driveUrl)}" target="_blank" rel="noopener noreferrer">保存先を開く</a></div>`;
+  }
+  return '';
 }
 
 function buildResultHTML(record) {
@@ -2195,7 +2093,7 @@ function buildHistoryCard(record, index) {
           <span class="history-date">${escapeHtml(formatDate(record.createdAt))}</span>
         </div>
         <p class="history-comment">${escapeHtml(record.overallComment)}</p>
-        <p class="history-comment" style="margin-bottom:8px;color:var(--text-dim)">送信: ${escapeHtml(status.label)} / ${escapeHtml(record.delivery?.destination || record.delivery?.target || 'both')}</p>
+        <p class="history-comment" style="margin-bottom:8px;color:var(--text-dim)">送信: ${escapeHtml(status.label)} / drive</p>
         <div class="history-card-footer">
           <button class="btn-detail" onclick="openModal(${record.id});event.stopPropagation()">詳細</button>
           <button class="btn-delete" onclick="deleteRecord(${record.id}, event)">削除</button>
@@ -2273,8 +2171,8 @@ async function refreshRecordViews(record) {
 function buildDeliveryState(record, status, extra = {}) {
   return {
     ...(record.delivery || {}),
-    target: extra.target || record.delivery?.target || collectDeliverySettings().target || 'both',
-    destination: extra.target || record.delivery?.destination || collectDeliverySettings().target || 'both',
+    target: extra.target || record.delivery?.target || 'drive',
+    destination: extra.target || record.delivery?.destination || 'drive',
     status,
     sent: extra.sent ?? record.delivery?.sent ?? false,
     sentAt: extra.sentAt ?? record.delivery?.sentAt ?? '',
@@ -2345,6 +2243,7 @@ async function sendLatestRecord() {
 }
 
 applyDeliverySettings();
+updateLaunchWarning();
 updateActionLinks();
 void renderHistory();
 
