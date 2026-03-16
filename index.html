@@ -1809,55 +1809,272 @@ function pickContestReferences(reviewPhilosophy, genre) {
     .slice(0, 5);
 }
 
-function generateContestCommentary(scores, metrics, genre, reviewPhilosophy) {
+function getCommentVariantSeed(metrics, scores, genre, reviewPhilosophy) {
+  return Math.abs(Math.round(
+    metrics.brightnessMean * 3 +
+    metrics.subjectXRatio * 100 +
+    metrics.subjectYRatio * 120 +
+    metrics.thirdsAlignment * 90 +
+    metrics.sharpnessRaw * 11 +
+    scores.totalScore * 7 +
+    genre.length * 13 +
+    reviewPhilosophy.length * 17
+  ));
+}
+
+function chooseVariant(list, seed, offset = 0) {
+  if (!list.length) return '';
+  return list[(seed + offset) % list.length];
+}
+
+function buildCompositionNarrative(metrics, scores, seed) {
+  const subjectPosX = metrics.subjectXRatio < 0.38 ? '左寄り' : metrics.subjectXRatio > 0.62 ? '右寄り' : '中央寄り';
+  const subjectPosY = metrics.subjectYRatio < 0.38 ? '上寄り' : metrics.subjectYRatio > 0.62 ? '下寄り' : '中段';
+  const balanceText = metrics.leftRightBalance > 0.88 && metrics.topBottomBalance > 0.84
+    ? '左右・上下の釣り合いがかなり安定しています'
+    : metrics.leftRightBalance < 0.7 || metrics.topBottomBalance < 0.68
+      ? 'フレーム内の荷重バランスに偏りがあります'
+      : 'バランスは大きく崩れていません';
+  const thirdsText = metrics.thirdsAlignment > 0.72
+    ? '三分割寄りの配置が強く出ています'
+    : metrics.thirdsAlignment < 0.36
+      ? '定番の三分割から外した置き方が見られます'
+      : '三分割寄りと中央配置の中間にあります';
+  const concentrationText = metrics.subjectConcentration > 0.12
+    ? '主題が強く凝縮され、視線の着地点が明快です'
+    : metrics.subjectConcentration < 0.06
+      ? '視線の集約が弱く、主役がやや拡散しています'
+      : '主題集中は中庸で、読み取りに少し余白があります';
+  return chooseVariant([
+    `${subjectPosX}・${subjectPosY}に主題があり、${balanceText}。${thirdsText}一方で、${concentrationText}。`,
+    `主題位置は${subjectPosX}かつ${subjectPosY}で、${thirdsText}。${balanceText}ため、画面骨格の読み取りは比較的速いです。`,
+    `${balanceText}。主題は${subjectPosX}・${subjectPosY}にあり、${concentrationText}ことが構図印象を左右しています。`,
+  ], seed, 1);
+}
+
+function buildLightNarrative(metrics, seed) {
+  const exposureText = metrics.brightnessMean > 154
+    ? '全体がやや高めの露出域にあります'
+    : metrics.brightnessMean < 112
+      ? '全体は低めの露出域で、暗部が主張しやすい状態です'
+      : '平均輝度は極端ではなく、ベース露出は大きく崩れていません';
+  const clipText = metrics.overexposedRatio > 0.09
+    ? `白飛びが ${round(metrics.overexposedRatio * 100, 1)}% とやや多く`
+    : metrics.underexposedRatio > 0.13
+      ? `黒つぶれが ${round(metrics.underexposedRatio * 100, 1)}% と多めで`
+      : '白飛び・黒つぶれの両端は比較的抑えられており';
+  const contrastText = metrics.contrast > 0.52
+    ? 'コントラストは強めで第一印象は出しやすいです'
+    : metrics.contrast < 0.28
+      ? 'コントラストが浅く、面の分離が弱く見えやすいです'
+      : 'コントラストは中間域で、階調のつながりは保たれています';
+  return chooseVariant([
+    `${exposureText}。${clipText}、${contrastText}。`,
+    `${clipText}、平均輝度 ${round(metrics.brightnessMean)} とコントラスト ${round(metrics.contrast, 2)} の関係から、光の設計が評価を左右しています。`,
+    `${contrastText}。平均輝度 ${round(metrics.brightnessMean)} に対して、${clipText}ことが光の完成度に直結しています。`,
+  ], seed, 2);
+}
+
+function buildColorNarrative(metrics, seed) {
+  const saturationText = metrics.saturationRatio > 0.24
+    ? '彩度の立ち上がりが強く、色面が先に見えるタイプです'
+    : metrics.saturationRatio < 0.1
+      ? '彩度は控えめで、色よりもトーン設計が前に出る状態です'
+      : '彩度は中庸で、色と階調のバランス型です';
+  const entropyText = metrics.entropy > 6.8
+    ? '情報量が多く、色の分離も豊富です'
+    : metrics.entropy < 5.6
+      ? '色数や階調の種類は比較的絞られています'
+      : '情報量は平均域で、整理次第で見え方が変わる素材です';
+  return chooseVariant([
+    `${saturationText}。${entropyText}ため、色を足すより整理するかどうかが鍵になります。`,
+    `${entropyText}。彩度比 ${round(metrics.saturationRatio, 2)} なので、色の強さよりも配色関係の整理が効く写真です。`,
+    `彩度比 ${round(metrics.saturationRatio, 2)} から見ると、${saturationText}。${entropyText}。`,
+  ], seed, 3);
+}
+
+function buildTechnicalNarrative(metrics, seed) {
+  const sharpText = metrics.sharpnessRaw > 22
+    ? '輪郭の立ち上がりは十分で'
+    : metrics.sharpnessRaw < 10
+      ? '輪郭の芯が弱く'
+      : 'シャープネスは中間域で';
+  const noiseText = metrics.noiseEstimate > 12
+    ? `ノイズ推定 ${round(metrics.noiseEstimate, 1)} が高めです`
+    : metrics.noiseEstimate < 6
+      ? `ノイズ推定 ${round(metrics.noiseEstimate, 1)} で比較的安定しています`
+      : `ノイズ推定 ${round(metrics.noiseEstimate, 1)} で許容範囲です`;
+  return chooseVariant([
+    `${sharpText}、${noiseText}。技術評価はシャープネス ${round(metrics.sharpnessRaw, 1)} とエッジ量 ${round(metrics.meanEdge, 1)} のバランスで決まっています。`,
+    `${noiseText}。シャープネス ${round(metrics.sharpnessRaw, 1)}、エッジ量 ${round(metrics.meanEdge, 1)} のため、技術面は素材の良さがまだ残っています。`,
+    `技術的には ${sharpText}、${noiseText}。特にピント感とざらつきのどちらが先に見えるかが評価差になります。`,
+  ], seed, 4);
+}
+
+function buildVisualNarrative(metrics, seed) {
+  const weightText = metrics.subjectConcentration > 0.11
+    ? '主題の比重が画面内で強く勝っています'
+    : metrics.subjectConcentration < 0.055
+      ? '主題の比重が弱く、視線が散りやすいです'
+      : '主題の比重は中庸です';
+  const backgroundText = metrics.backgroundClutter > 0.6
+    ? '背景の散らかりが視線を引き戻します'
+    : metrics.backgroundClutter < 0.35
+      ? '背景整理が効き、主題に視線が戻りやすいです'
+      : '背景情報は多すぎず少なすぎずです';
+  return chooseVariant([
+    `${weightText}。${backgroundText}ため、ビジュアルウエイトの読みは比較的明快です。`,
+    `${backgroundText}。主題集中 ${round(metrics.subjectConcentration, 3)} に対して、視線の停止位置は ${metrics.subjectXRatio < 0.5 ? '左側' : '右側'}に寄っています。`,
+    `ビジュアルウエイトでは、${weightText}一方で、${backgroundText}。`,
+  ], seed, 5);
+}
+
+function buildPortraitExpressionNarrative(metrics, seed) {
+  const faceArea = round(metrics.faceMetrics.faceAreaRatio * 100, 1);
+  const faceText = metrics.faceMetrics.faceAreaRatio > 0.09
+    ? `顔面積比 ${faceArea}% と存在感が十分です`
+    : metrics.faceMetrics.faceAreaRatio < 0.03
+      ? `顔面積比 ${faceArea}% で人物の主役性は弱めです`
+      : `顔面積比 ${faceArea}% で人物の比重は中庸です`;
+  const centerText = metrics.faceMetrics.faceCenteredness > 0.76
+    ? '顔の置き方は安定寄りです'
+    : metrics.faceMetrics.faceCenteredness < 0.5
+      ? '顔位置に少し不安定さがあり、視線が泳ぎやすいです'
+      : '顔位置は大きくは崩れていません';
+  return chooseVariant([
+    `${faceText}。${centerText}ため、表現力は人物の見せ方に強く依存しています。`,
+    `${centerText}。${faceText}ので、人物写真としての引力は距離設計の巧拙で決まっています。`,
+    `ポートレートでは ${faceText}。${centerText}。感情の読み取りより先に、人物の存在感が届くかが鍵です。`,
+  ], seed, 6);
+}
+
+function buildNonPortraitExpressionNarrative(metrics, seed) {
+  const infoText = metrics.backgroundInformation > 0.62
+    ? '背景情報量が多く、読み取り要素が豊富です'
+    : metrics.backgroundInformation < 0.34
+      ? '背景情報はかなり絞られており、主題が先に立ちます'
+      : '背景情報量は中庸です';
+  const clutterText = metrics.backgroundClutter > 0.58
+    ? 'ただし散らかりが強く、物語より先にノイズが見えやすい状態です'
+    : '背景整理は比較的効いており、主題の意味を追いやすい状態です';
+  return chooseVariant([
+    `${infoText}。${clutterText}`,
+    `${clutterText}。背景情報量 ${round(metrics.backgroundInformation, 2)} と主題集中 ${round(metrics.subjectConcentration, 3)} の関係が表現力を決めています。`,
+    `nonPortrait としては ${infoText}。${clutterText}`,
+  ], seed, 7);
+}
+
+function buildDevelopmentAdvice(metrics, scores, genre, seed) {
+  const advice = [];
+  advice.push('ヒストグラムは両端の張り付き量と中間調の密度を見ながら、露光量より先に白レベル・黒レベルの支点を決めると調整が安定します。');
+  advice.push(metrics.overexposedRatio > 0.08
+    ? 'ハイライト側は飽和が近いので、白レベルとハイライトを弱めに戻し、トーンジャンプが出ない範囲で階調をつなぎ直す方向が安全です。'
+    : 'ハイライト側にはまだ余裕があります。明部を持ち上げる場合も色域飽和より先に階調のつながりが切れないかを確認してください。');
+  advice.push(metrics.underexposedRatio > 0.12
+    ? '暗部は持ち上げすぎると濁りや色ノイズが出やすいので、シャドウを強く上げるより黒レベルと中間調の橋渡しで整える方が破綻しにくいです。'
+    : '暗部は比較的保てています。黒を締める場合は情報が消える直前で止め、立体感だけを残す方向が向いています。');
+  advice.push(scores.colorScore < 68
+    ? '彩度は全体一括で足さず、主役色だけを軽く持ち上げて背景色を抑える方が色域保持に有利です。'
+    : '色は十分乗っています。彩度よりも色相分離や輝度差で主役色を立てると、印象を保ったまま破綻を防げます。');
+  if (genre === 'portrait') {
+    advice.push('肌や顔周辺は局所コントラストを上げすぎず、目元だけを少し締める方向で人物の存在感を出すと不自然さが出にくいです。');
+  } else {
+    advice.push('主題以外の局所コントラストを少し抑え、主題周辺だけを残す方向にすると、非人物写真でも視線誘導が整いやすくなります。');
+  }
+  return advice.slice(0, 4 + (seed % 2));
+}
+
+function buildNextDirection(scores, genre, reviewPhilosophy, metrics) {
+  const philosophyDirection = REVIEW_PHILOSOPHY_CONFIG[reviewPhilosophy]?.nextDirection || REVIEW_PHILOSOPHY_CONFIG.international.nextDirection;
+  const genreHint = genre === 'portrait'
+    ? '次は「人物の存在感」と「背景との関係」を一段はっきりさせ、感情だけでなく距離感でも物語を作る方向が伸びしろです。'
+    : metrics.subjectConcentration < 0.07
+      ? '次は主題の勝ち方をもう一段強くし、何を見せる写真なのかが一目で伝わる整理を試すと差が出ます。'
+      : '次は主題の強さを維持したまま、視点や高さを変えて固有の見え方を足す方向が有効です。';
+  return `${philosophyDirection} ${genreHint}`;
+}
+
+function generateCommentsFromAnalysis(scores, metrics, context = {}) {
+  const genre = context.genre || scores.genre || 'other';
+  const reviewPhilosophy = context.reviewPhilosophy || scores.reviewPhilosophy || 'international';
+  const sceneType = genre === 'portrait' ? 'portrait' : 'nonPortrait';
+  const seed = getCommentVariantSeed(metrics, scores, genre, reviewPhilosophy);
   const metricReasons = buildMetricReasons(scores, metrics, genre);
   const strengths = [];
   const improvements = {};
-  const ranked = [...CONTEST_SCORE_ITEMS].sort((a, b) => scores[b.key] - scores[a.key]);
-  const weakest = [...CONTEST_SCORE_ITEMS].sort((a, b) => scores[a.key] - scores[b.key]);
-  const strongKeys = ranked.slice(0, 4);
-  const weakKeys = weakest.slice(0, 3);
   const improvementSignals = buildContestImprovementSignals(metrics, scores, genre);
 
-  strongKeys.forEach(item => {
-    if (item.key === 'compositionScore') strengths.push(scores.originalityPenalty >= 10 ? '構図自体は安定しており、定番性と完成度の境界を攻めています。' : '構図の骨格が安定し、主題配置に緊張感があります。');
-    if (item.key === 'lightScore') strengths.push('光の当たり方と階調の残り方に無理が少なく、露出判断が良好です。');
-    if (item.key === 'colorScore') strengths.push('色の破綻が少なく、鑑賞時にノイズよりも色面が先に伝わります。');
-    if (item.key === 'expressionScore') strengths.push(genre === 'portrait' ? '人物の存在感や感情の読み取りが成立し、視線が止まりやすいです。' : '主題の意味や物語の読みが発生しやすく、単なる記録に留まりません。');
-    if (item.key === 'technicalScore') strengths.push('ピント・ノイズ・露出精度の基礎体力が高く、審査で減点されにくい状態です。');
-    if (item.key === 'visualWeightScore') strengths.push('サムネイルでも主題が勝ちやすく、視線誘導が明快です。');
-  });
+  const compositionNarrative = buildCompositionNarrative(metrics, scores, seed);
+  const lightNarrative = buildLightNarrative(metrics, seed);
+  const colorNarrative = buildColorNarrative(metrics, seed);
+  const technicalNarrative = buildTechnicalNarrative(metrics, seed);
+  const visualNarrative = buildVisualNarrative(metrics, seed);
+  const expressionNarrative = sceneType === 'portrait'
+    ? buildPortraitExpressionNarrative(metrics, seed)
+    : buildNonPortraitExpressionNarrative(metrics, seed);
 
-  CONTEST_SCORE_ITEMS.forEach(item => {
-    if (item.key === 'compositionScore') improvements.compositionScore = scores.compositionScore < 68
-      ? '主題を少しずらす、余白を切る、または高さを変えて、既視感の少ない主題配置へ再設計すると有効です。'
-      : '安定はしています。次は定番の三分割から一段外し、画面内の緊張感を増やす試行が効きます。';
-    if (item.key === 'lightScore') improvements.lightScore = scores.lightScore < 68
-      ? 'ハイライト優先か暗部優先かを先に決め、ヒストグラムの端張りを減らす方向で露出を詰めてください。'
-      : '光は悪くありません。時間帯や被写体角度を変え、光に固有性が出る瞬間を狙うと伸びます。';
-    if (item.key === 'colorScore') improvements.colorScore = scores.colorScore < 68
-      ? '色相の足し算を減らし、主役色を一つ立てる方向で整理すると審査時の読みが速くなります。'
-      : '色の安定感はあります。次は色数を絞るか、補色の緊張感を明確にする方向が有効です。';
-    if (item.key === 'expressionScore') improvements.expressionScore = scores.expressionScore < 68
-      ? (genre === 'portrait' ? '距離・視線・背景との関係を組み替え、感情の読み取りが起こる瞬間を待つと改善しやすいです。' : '主題の意味が立つ位置関係を探し、なぜこの瞬間なのかが伝わる要素を足してください。')
-      : '表現意図は伝わっています。次は見る側が一段深く解釈できる余白を残す構成が有効です。';
-    if (item.key === 'technicalScore') improvements.technicalScore = scores.technicalScore < 68
-      ? 'シャッター速度、ピント面、ISOの優先順位を整理し、まず破綻しない撮り方へ戻すのが近道です。'
-      : '技術基盤はあります。次は意図的な甘さやブレを「失敗でなく演出」として成立させる挑戦ができます。';
-    if (item.key === 'visualWeightScore') improvements.visualWeightScore = scores.visualWeightScore < 68
-      ? '主題の占有率か周辺整理のどちらかを強め、縮小表示でも目が迷わない画面に整えてください。'
-      : '視線誘導は十分です。次は大胆なトリミングや前景処理で、より強い引力を狙えます。';
-  });
+  if (scores.compositionScore >= 74) strengths.push(`構図では、${compositionNarrative}`);
+  if (scores.lightScore >= 72) strengths.push(`光では、${lightNarrative}`);
+  if (scores.colorScore >= 72) strengths.push(`色では、${colorNarrative}`);
+  if (scores.expressionScore >= 72) strengths.push(`表現力では、${expressionNarrative}`);
+  if (scores.technicalScore >= 72) strengths.push(`技術では、${technicalNarrative}`);
+  if (scores.visualWeightScore >= 72) strengths.push(`ビジュアルウエイトでは、${visualNarrative}`);
 
-  const overallComment = `${scores.reviewPhilosophyLabel}・${scores.genreLabel}として換算 ${scores.totalScore} 点。平均との差 ${scores.genreDelta >= 0 ? '+' : ''}${scores.genreDelta} 点で、一次審査は上位 ${scores.passEstimate}% 相当の想定です。`;
-  const developmentAdvice = [
-    'Lightroomでは、ヒストグラム両端の張り付きと中間調の密度を見ながら、白レベルと黒レベルを先に決めてから全体トーンを追い込む。',
-    metrics.overexposedRatio > 0.08 ? 'ハイライト側の粘りが弱いので、露光量よりハイライト・白レベルを先に下げて階調保持を優先する。' : 'ハイライトは持っています。白レベルを上げる場合も色域の飽和とトーンジャンプが出ない範囲で止める。',
-    metrics.underexposedRatio > 0.12 ? '暗部を持ち上げる場合は黒浮きよりも階調接続を優先し、シャドウと黒レベルを同時に上げすぎない。' : '暗部は比較的安定しています。黒を締めるときは影の情報が潰れない位置で止める。',
-    scores.colorScore < 68 ? '色は全体を一括で強めず、主役色だけを選択的に立てて色域破綻を避ける。' : '彩度よりも自然な色相分離を優先し、被写体と背景の色の距離を保つ。',
-  ];
+  if (strengths.length < 3) {
+    [
+      `構図の現状は、${compositionNarrative}`,
+      `光の現状は、${lightNarrative}`,
+      `色の現状は、${colorNarrative}`,
+      `表現力の現状は、${expressionNarrative}`,
+      `技術の現状は、${technicalNarrative}`,
+      `ビジュアルウエイトの現状は、${visualNarrative}`,
+    ].forEach(line => {
+      if (strengths.length < 4 && !strengths.includes(line)) strengths.push(line);
+    });
+  }
 
+  improvements.compositionScore = metrics.thirdsAlignment > 0.72 && scores.originalityPenalty >= 10
+    ? `三分割の気配が強く既視感に触れやすいので、主題位置を少し外すか、撮影高さを変えて主題配置の固有性を足すと改善します。現在は ${round(metrics.subjectXRatio, 2)} / ${round(metrics.subjectYRatio, 2)} 付近に重心があります。`
+    : metrics.leftRightBalance < 0.72 || metrics.topBottomBalance < 0.7
+      ? `左右 ${round(metrics.leftRightBalance, 2)} / 上下 ${round(metrics.topBottomBalance, 2)} のバランス差が見えるため、不要な余白を切るか、主題を少し戻して荷重を整えると安定します。`
+      : `構図は崩れていません。次は主題集中 ${round(metrics.subjectConcentration, 3)} を保ちながら、より意外性のある主題位置へ一段ずらす挑戦が有効です。`;
+
+  improvements.lightScore = metrics.overexposedRatio > 0.08
+    ? `白飛び ${round(metrics.overexposedRatio * 100, 1)}% が先に見えるため、露出を下げるよりもハイライト側の回復と中間調の再配置で整えると光が保ちやすいです。`
+    : metrics.underexposedRatio > 0.12
+      ? `黒つぶれ ${round(metrics.underexposedRatio * 100, 1)}% が多く、暗部情報が痩せています。暗部を少し起こしつつ、黒レベルを締めすぎない方向が向いています。`
+      : `平均輝度 ${round(metrics.brightnessMean)} とコントラスト ${round(metrics.contrast, 2)} は大崩れしていません。時間帯や光の入射角を変え、光自体の固有性を強めるとさらに伸びます。`;
+
+  improvements.colorScore = metrics.saturationRatio > 0.25
+    ? `彩度比 ${round(metrics.saturationRatio, 2)} で色が前に出やすいので、全体をさらに盛るより主役色を残して周辺色を少し引く方が品位が出ます。`
+    : metrics.saturationRatio < 0.1
+      ? `彩度比 ${round(metrics.saturationRatio, 2)} と低めなので、色を足すなら全体一括ではなく、主題に関係する色だけを選択的に強める方が効果的です。`
+      : `色は中庸です。背景情報量 ${round(metrics.backgroundInformation, 2)} に対して色数が増えすぎないよう、配色の役割分担を明確にすると安定します。`;
+
+  improvements.expressionScore = sceneType === 'portrait'
+    ? (metrics.faceMetrics.faceAreaRatio < 0.035
+      ? `顔面積比 ${round(metrics.faceMetrics.faceAreaRatio * 100, 1)}% で人物の主役性が弱めです。被写体との距離を少し詰めるか、背景の情報量を減らして感情の読み取りを優先すると改善します。`
+      : `顔位置の安定度 ${round(metrics.faceMetrics.faceCenteredness, 2)} を踏まえると人物の置き方は成立しています。次は表情だけでなく、身体の向きや背景との関係で物語性を深める方向が有効です。`)
+    : (metrics.backgroundInformation > 0.62 && metrics.backgroundClutter > 0.56
+      ? `背景情報量 ${round(metrics.backgroundInformation, 2)} に対して散らかり ${round(metrics.backgroundClutter, 2)} が高く、意味よりノイズが先に見えやすいです。見せたい要素を一段減らすと表現意図が立ちます。`
+      : `nonPortrait としては主題の意味は読み取れます。次は「なぜこの瞬間か」が強まる位置関係や前景処理を足すと、記録から作品へ寄りやすいです。`);
+
+  improvements.technicalScore = metrics.sharpnessRaw < 10
+    ? `シャープネス ${round(metrics.sharpnessRaw, 1)} で輪郭の芯が弱いので、まずはシャッター速度かピント面の確保を優先した方が改善幅が大きいです。`
+    : metrics.noiseEstimate > 11
+      ? `ノイズ推定 ${round(metrics.noiseEstimate, 1)} が高めで、ディテールよりざらつきが先に見えます。ISOか持ち上げ量を見直し、ノイズを出さない露出設計へ寄せると安定します。`
+      : `技術基盤は大きく崩れていません。今後は基礎を保ったまま、意図的なブレや甘さを演出として成立させる余地があります。`;
+
+  improvements.visualWeightScore = metrics.subjectConcentration < 0.06
+    ? `主題集中 ${round(metrics.subjectConcentration, 3)} と低めで、視線の着地点が弱いです。主題の占有率を上げるか、周辺要素を減らして一目の強さを作ると改善します。`
+    : metrics.backgroundClutter > 0.58
+      ? `背景の散らかり ${round(metrics.backgroundClutter, 2)} が主題の勝ち方を弱めています。周辺の高コントラスト要素を減らす方向が有効です。`
+      : `ビジュアルウエイトは成立しています。次はトリミングや前景の扱いで、視線の停止位置をさらに明確にすると強くなります。`;
+
+  const developmentAdvice = buildDevelopmentAdvice(metrics, scores, genre, seed);
+  const nextDirection = buildNextDirection(scores, genre, reviewPhilosophy, metrics);
   const contestReferences = pickContestReferences(reviewPhilosophy, genre);
+  const overallComment = `${scores.reviewPhilosophyLabel}・${scores.genreLabel}として換算 ${scores.totalScore} 点。平均との差 ${scores.genreDelta >= 0 ? '+' : ''}${scores.genreDelta} 点で、一次審査は上位 ${scores.passEstimate}% 相当の想定です。${improvementSignals.length ? ` 現状の論点は ${improvementSignals.slice(0, 3).join('、')} です。` : ''}`;
 
   return {
     metricReasons,
@@ -1866,10 +2083,10 @@ function generateContestCommentary(scores, metrics, genre, reviewPhilosophy) {
     improvementSignals,
     developmentAdvice,
     overallComment,
-    nextDirection: REVIEW_PHILOSOPHY_CONFIG[reviewPhilosophy]?.nextDirection || REVIEW_PHILOSOPHY_CONFIG.international.nextDirection,
+    nextDirection,
     contestReferences,
     strengthsComment: [...new Set(strengths)].slice(0, 3).join(' '),
-    improvementComment: weakKeys.map(item => `${item.label}: ${improvements[item.key]}`).join(' '),
+    improvementComment: CONTEST_SCORE_ITEMS.map(item => `${item.label}: ${improvements[item.key]}`).join(' '),
   };
 }
 
@@ -1912,7 +2129,7 @@ async function analyzeImageFile(file, preferredSource = '') {
   const reviewPhilosophy = getSelectedReviewPhilosophy();
   const genre = getSelectedGenre();
   const scores = deriveContestScores(metrics, reviewPhilosophy, genre);
-  const comments = generateContestCommentary(scores, metrics, genre, reviewPhilosophy);
+  const comments = generateCommentsFromAnalysis(scores, metrics, { genre, reviewPhilosophy });
 
   return { scores, metrics, improvementSignals: comments.improvementSignals, comments };
 }
