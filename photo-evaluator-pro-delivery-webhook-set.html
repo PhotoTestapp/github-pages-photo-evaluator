@@ -792,15 +792,31 @@
 
 
 <script>
-const SCORE_ITEMS = [
-  { label: '構図', key: 'compositionScore', icon: '🖼️' },
-  { label: '明るさ', key: 'brightnessScore', icon: '☀️' },
-  { label: 'ピント', key: 'focusScore', icon: '🔍' },
-  { label: '表情', key: 'expressionScore', icon: '😊' },
-  { label: '背景', key: 'backgroundScore', icon: '🌿' },
-  { label: '清潔感', key: 'cleanlinessScore', icon: '✨' },
-  { label: '印象', key: 'impressionScore', icon: '💫' },
-];
+const SCORE_ITEMS_BY_MODE = {
+  portrait: [
+    { label: '構図', key: 'compositionScore', icon: '🖼️' },
+    { label: '明るさ', key: 'brightnessScore', icon: '☀️' },
+    { label: 'ピント', key: 'focusScore', icon: '🔍' },
+    { label: '表情', key: 'expressionScore', icon: '😊' },
+    { label: '背景', key: 'backgroundScore', icon: '🌿' },
+    { label: '清潔感', key: 'cleanlinessScore', icon: '✨' },
+    { label: '印象', key: 'impressionScore', icon: '💫' },
+  ],
+  nonPortrait: [
+    { label: '構図', key: 'compositionScore', icon: '🖼️' },
+    { label: '明るさ', key: 'brightnessScore', icon: '☀️' },
+    { label: 'ピント', key: 'focusScore', icon: '🔍' },
+    { label: '色再現', key: 'colorScore', icon: '🎨' },
+    { label: '背景整理', key: 'organizationScore', icon: '🧩' },
+    { label: '情報量', key: 'informationScore', icon: '📊' },
+    { label: '印象', key: 'impressionScore', icon: '💫' },
+  ],
+};
+
+const SCENE_TYPE_LABELS = {
+  portrait: '人物写真',
+  nonPortrait: '非人物写真',
+};
 
 const ITEM_COMMENT_MAP = {
   compositionScore: {
@@ -818,6 +834,11 @@ const ITEM_COMMENT_MAP = {
     mid: ['大きなピンボケではありませんが、やや甘さがあります。', '輪郭情報は取れていますが、もう少しシャープさが欲しい状態です。'],
     low: ['エッジ量が不足しており、ピントが甘く見えます。', 'シャープネスが低く、手ブレかピントずれの可能性があります。'],
   },
+  colorScore: {
+    high: ['色の乗り方が自然で、白飛びや黒つぶれの影響も少ないです。', '色再現とコントラストの両立ができており、見栄えが安定しています。'],
+    mid: ['色は出ていますが、ハイライトや彩度の調整でさらに整います。', '色再現は平均的で、露出の詰めで印象が上がりやすい状態です。'],
+    low: ['色再現が不安定で、白飛びや黒つぶれが見栄えを下げています。', '彩度やコントラストのバランスが崩れ、色の説得力が弱くなっています。'],
+  },
   expressionScore: {
     high: ['顔検出結果と主題のまとまりから見て、人物訴求力が高いです。', '人物がしっかり主題化されており、表情項目は高評価です。'],
     mid: ['表情項目は平均的です。顔の向きや距離感を整えると伸びます。', '顔は捉えられていますが、印象づけはまだ改善できます。'],
@@ -828,10 +849,20 @@ const ITEM_COMMENT_MAP = {
     mid: ['背景は許容範囲ですが、やや情報量が多めです。', '背景の整理は概ねできていますが、余計な要素を減らす余地があります。'],
     low: ['背景の情報量が多く、主題より先に周辺が目に入ります。', '背景の散らかり度が高く、場所変更や整理が必要です。'],
   },
+  organizationScore: {
+    high: ['不要要素が抑えられ、画面整理ができています。', '背景と主題の役割分担が明快で、視線誘導が安定しています。'],
+    mid: ['大きな破綻はありませんが、周辺整理でさらに見やすくなります。', '背景整理は平均的で、少し要素を減らすと主題が立ちやすくなります。'],
+    low: ['周辺要素が多く、背景整理の不足が目立ちます。', '背景の散らかりが強く、主題の見え方を弱めています。'],
+  },
   cleanlinessScore: {
     high: ['ノイズが少なく、画面全体に整頓感があります。', '視覚ノイズが抑えられ、清潔感のある見え方です。'],
     mid: ['清潔感は平均的です。背景整理やノイズ低減で改善できます。', '大きな崩れはありませんが、細部の整頓で印象が上がります。'],
     low: ['ノイズや背景の散らかりが清潔感を下げています。', '画面内の不要情報が多く、清潔感評価が低く出ています。'],
+  },
+  informationScore: {
+    high: ['情報量が適切で、見どころが整理されています。', '不足も過多もなく、内容が伝わりやすい密度です。'],
+    mid: ['情報量は標準的です。主題の絞り込みで完成度が上がります。', '見どころはありますが、情報の整理でもう一段見やすくなります。'],
+    low: ['情報量の偏りが大きく、写真の意図が伝わりにくい状態です。', '要素が多すぎるか少なすぎるため、見どころの整理が必要です。'],
   },
   impressionScore: {
     high: ['第一印象が強く、総合的な完成度が高い一枚です。', '構図・明るさ・主題性のバランスが良く、印象に残りやすい写真です。'],
@@ -1395,6 +1426,17 @@ function computeFaceMetrics(faces, width, height) {
   };
 }
 
+function detectSceneType(metrics) {
+  const faceMetrics = metrics.faceMetrics;
+  if (!faceMetrics.hasFace) return 'nonPortrait';
+
+  const strongFace = faceMetrics.faceAreaRatio >= 0.05;
+  const mediumFace = faceMetrics.faceAreaRatio >= 0.032 && faceMetrics.faceCenteredness >= 0.58;
+  const centeredSingleFace = faceMetrics.faceAreaRatio >= 0.024 && faceMetrics.faceCenteredness >= 0.74 && faceMetrics.faceCount <= 2;
+
+  return (strongFace || mediumFace || centeredSingleFace) ? 'portrait' : 'nonPortrait';
+}
+
 function deriveScoresFromMetrics(metrics) {
   const brightnessScore = clamp(round(
     scoreFromDeviation(metrics.brightnessMean, 138, 22, 62) * 0.34 +
@@ -1411,90 +1453,152 @@ function deriveScoresFromMetrics(metrics) {
     (1 - normalize(metrics.noiseEstimate, 3, 18)) * 12
   ), 14, 98);
 
+  const sceneType = detectSceneType(metrics);
+  const subjectCenterSupport = 1 - clamp(
+    Math.hypot(metrics.subjectXRatio - 0.5, metrics.subjectYRatio - 0.5) / 0.72,
+    0,
+    1
+  );
+
   const compositionScore = clamp(round(
-    metrics.leftRightBalance * 22 +
+    metrics.leftRightBalance * 23 +
     metrics.topBottomBalance * 18 +
     metrics.thirdsAlignment * 28 +
-    normalize(metrics.subjectConcentration, 0.035, 0.14) * 18 +
-    (metrics.faceMetrics.hasFace ? metrics.faceMetrics.faceCenteredness * 14 : normalize(metrics.subjectConcentration, 0.04, 0.12) * 14)
+    normalize(metrics.subjectConcentration, 0.035, 0.14) * 17 +
+    (sceneType === 'portrait'
+      ? metrics.faceMetrics.faceCenteredness * 14
+      : subjectCenterSupport * 14)
   ), 18, 97);
 
-  const backgroundScore = clamp(round(
-    (1 - metrics.backgroundInformation) * 34 +
-    (1 - metrics.backgroundClutter) * 38 +
-    normalize(metrics.subjectConcentration, 0.03, 0.14) * 18 +
-    (1 - normalize(metrics.edgeBands.peripheral / Math.max(1, metrics.edgeBands.total), 0.45, 0.9)) * 10
-  ), 18, 96);
+  if (sceneType === 'portrait') {
+    const backgroundScore = clamp(round(
+      (1 - metrics.backgroundInformation) * 34 +
+      (1 - metrics.backgroundClutter) * 38 +
+      normalize(metrics.subjectConcentration, 0.03, 0.14) * 18 +
+      (1 - normalize(metrics.edgeBands.peripheral / Math.max(1, metrics.edgeBands.total), 0.45, 0.9)) * 10
+    ), 18, 96);
 
-  const cleanlinessScore = clamp(round(
-    (1 - normalize(metrics.noiseEstimate, 2, 18)) * 30 +
-    brightnessScore * 0.26 +
-    backgroundScore * 0.24 +
-    (1 - metrics.backgroundClutter) * 20
-  ), 18, 96);
+    const cleanlinessScore = clamp(round(
+      (1 - normalize(metrics.noiseEstimate, 2, 18)) * 30 +
+      brightnessScore * 0.26 +
+      backgroundScore * 0.24 +
+      (1 - metrics.backgroundClutter) * 20
+    ), 18, 96);
 
-  const expressionBase = metrics.faceMetrics.hasFace
-    ? (
+    const expressionScore = clamp(round(
       normalize(metrics.faceMetrics.faceAreaRatio, 0.03, 0.18) * 36 +
       metrics.faceMetrics.faceCenteredness * 24 +
       metrics.faceMetrics.faceStability * 18 +
       normalize(focusScore, 45, 95) * 12 +
       normalize(brightnessScore, 45, 95) * 10
-    )
-    : (
-      normalize(metrics.subjectConcentration, 0.04, 0.14) * 22 +
-      normalize(compositionScore, 40, 90) * 18 +
-      normalize(focusScore, 40, 90) * 14 + 8
-    );
-  const expressionScore = clamp(round(expressionBase), metrics.faceMetrics.hasFace ? 24 : 20, metrics.faceMetrics.hasFace ? 95 : 64);
+    ), 28, 95);
+
+    const impressionScore = clamp(round(
+      compositionScore * 0.21 +
+      brightnessScore * 0.16 +
+      focusScore * 0.17 +
+      expressionScore * 0.15 +
+      backgroundScore * 0.14 +
+      cleanlinessScore * 0.17
+    ), 18, 98);
+
+    const totalScore = clamp(round(
+      compositionScore * 0.16 +
+      brightnessScore * 0.15 +
+      focusScore * 0.17 +
+      expressionScore * 0.13 +
+      backgroundScore * 0.13 +
+      cleanlinessScore * 0.11 +
+      impressionScore * 0.15
+    ), 16, 98);
+
+    return {
+      sceneType,
+      compositionScore,
+      brightnessScore,
+      focusScore,
+      expressionScore,
+      backgroundScore,
+      cleanlinessScore,
+      impressionScore,
+      totalScore,
+    };
+  }
+
+  const colorScore = clamp(round(
+    scoreFromDeviation(metrics.saturationRatio, 0.18, 0.08, 0.2) * 0.34 +
+    scoreFromDeviation(metrics.contrast, 0.42, 0.14, 0.38) * 0.28 +
+    (1 - clamp(metrics.overexposedRatio / 0.11, 0, 1)) * 18 +
+    (1 - clamp(metrics.underexposedRatio / 0.14, 0, 1)) * 20
+  ), 18, 97);
+
+  const organizationScore = clamp(round(
+    (1 - metrics.backgroundClutter) * 40 +
+    (1 - normalize(metrics.edgeBands.peripheral / Math.max(1, metrics.edgeBands.total), 0.45, 0.9)) * 20 +
+    metrics.leftRightBalance * 16 +
+    metrics.topBottomBalance * 10 +
+    normalize(metrics.subjectConcentration, 0.03, 0.13) * 14
+  ), 18, 97);
+
+  const informationScore = clamp(round(
+    scoreFromDeviation(metrics.backgroundInformation, 0.46, 0.17, 0.42) * 0.48 +
+    scoreFromDeviation(metrics.entropy, 6.1, 0.9, 2.2) * 0.32 +
+    normalize(metrics.subjectConcentration, 0.03, 0.12) * 20
+  ), 18, 97);
 
   const impressionScore = clamp(round(
-    compositionScore * 0.22 +
+    compositionScore * 0.2 +
     brightnessScore * 0.16 +
     focusScore * 0.18 +
-    expressionScore * 0.14 +
-    backgroundScore * 0.14 +
-    cleanlinessScore * 0.16
+    colorScore * 0.14 +
+    organizationScore * 0.16 +
+    informationScore * 0.16
   ), 18, 98);
 
   const totalScore = clamp(round(
-    compositionScore * 0.16 +
-    brightnessScore * 0.15 +
-    focusScore * 0.17 +
-    expressionScore * 0.12 +
-    backgroundScore * 0.14 +
-    cleanlinessScore * 0.11 +
-    impressionScore * 0.15
+    compositionScore * 0.18 +
+    brightnessScore * 0.16 +
+    focusScore * 0.18 +
+    colorScore * 0.14 +
+    organizationScore * 0.13 +
+    informationScore * 0.08 +
+    impressionScore * 0.13
   ), 16, 98);
 
   return {
+    sceneType,
     compositionScore,
     brightnessScore,
     focusScore,
-    expressionScore,
-    backgroundScore,
-    cleanlinessScore,
+    colorScore,
+    organizationScore,
+    informationScore,
     impressionScore,
     totalScore,
   };
 }
 
 function buildImprovementSignals(metrics, scores) {
+  const sceneType = scores.sceneType || detectSceneType(metrics);
   const signals = [];
   if (metrics.overexposedRatio > 0.08) signals.push('白飛びが目立ちます');
   if (metrics.underexposedRatio > 0.12) signals.push('黒つぶれが多めです');
   if (metrics.noiseEstimate > 10.5) signals.push('高ISO由来のノイズ感があります');
-  if (metrics.backgroundClutter > 0.58) signals.push('背景が過密です');
+  if (metrics.backgroundClutter > 0.58) signals.push(sceneType === 'portrait' ? '背景が過密です' : '背景整理が不足しています');
   if (scores.focusScore < 60) signals.push('ピント不足です');
   if (metrics.thirdsAlignment < 0.35) signals.push('主題配置が三分割構図から外れています');
-  if (!metrics.faceMetrics.hasFace && metrics.faceDetectionSupported) signals.push('顔未検出のため表情評価は保守的です');
-  if (!metrics.faceDetectionSupported) signals.push('FaceDetector非対応環境です');
+  if (sceneType === 'nonPortrait' && scores.colorScore < 60) signals.push('色再現が安定していません');
+  if (sceneType === 'nonPortrait' && scores.informationScore < 60) signals.push('情報量の整理が必要です');
+  if (sceneType === 'portrait' && !metrics.faceDetectionSupported) signals.push('FaceDetector非対応環境です');
   return signals;
 }
 
 function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
+  const sceneType = scores.sceneType || detectSceneType(metrics);
+  const activeItems = SCORE_ITEMS_BY_MODE[sceneType] || SCORE_ITEMS_BY_MODE.portrait;
+  const activeKeys = activeItems.map(item => item.key);
   const ranked = Object.entries(scores)
-    .filter(([key]) => key !== 'totalScore')
+    .filter(([key]) => activeKeys.includes(key))
     .sort((a, b) => b[1] - a[1]);
   const bestKey = ranked[0][0];
   const worstKey = ranked[ranked.length - 1][0];
@@ -1504,9 +1608,12 @@ function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
   const concreteIssues = [];
   if (metrics.overexposedRatio > 0.08) concreteIssues.push(`白飛び率${round(metrics.overexposedRatio * 100)}%が出ています`);
   if (metrics.underexposedRatio > 0.12) concreteIssues.push(`黒つぶれ率${round(metrics.underexposedRatio * 100)}%が高めです`);
-  if (metrics.backgroundClutter > 0.58) concreteIssues.push('背景の散らかりが主題を弱めています');
+  if (metrics.backgroundClutter > 0.58) concreteIssues.push(sceneType === 'portrait' ? '背景の散らかりが主題を弱めています' : '背景の散らかりが画面整理を崩しています');
   if (scores.focusScore < 60) concreteIssues.push(`シャープネス指標${round(metrics.sharpnessRaw, 1)}で輪郭が弱めです`);
   if (metrics.noiseEstimate > 10.5) concreteIssues.push(`ノイズ推定値${round(metrics.noiseEstimate, 1)}でざらつきがあります`);
+  if (sceneType === 'nonPortrait' && scores.colorScore < 60) concreteIssues.push(`彩度比${round(metrics.saturationRatio, 2)}とコントラスト${round(metrics.contrast, 2)}のバランスが弱めです`);
+  if (sceneType === 'nonPortrait' && scores.informationScore < 60) concreteIssues.push(`背景情報量${round(metrics.backgroundInformation, 2)}が適正域から外れています`);
+  if (sceneType === 'portrait' && scores.expressionScore < 60) concreteIssues.push(`顔面積比${round(metrics.faceMetrics.faceAreaRatio * 100, 1)}%で人物主題の訴求が弱めです`);
 
   const weakestBase = pick(ITEM_COMMENT_MAP[worstKey][getTier(scores[worstKey])], seed + 11);
   const improvementComment = [
@@ -1515,21 +1622,30 @@ function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
     improvementSignals.slice(0, 2).length ? `主な課題は ${improvementSignals.slice(0, 2).join('・')} です。` : '',
   ].filter(Boolean).join(' ');
 
-  const faceNote = !metrics.faceMetrics.hasFace
-    ? (metrics.faceDetectionSupported ? '顔が検出できなかったため、表情は評価精度低で保守的に算出しています。' : 'FaceDetector非対応環境のため、表情は画像特徴量から推定しています。')
-    : `顔検出${metrics.faceMetrics.faceCount}件。顔面積比${round(metrics.faceMetrics.faceAreaRatio * 100, 1)}%。`;
-
   let overallComment = `総合${scores.totalScore}点。`;
   if (scores.totalScore >= 85) {
-    overallComment += '露出・構図・主題性のバランスが良く、完成度の高い写真です。';
+    overallComment += sceneType === 'portrait'
+      ? '露出・構図・主題性のバランスが良く、完成度の高い人物写真です。'
+      : '構図・色・情報整理のバランスが良く、完成度の高い写真です。';
   } else if (scores.totalScore >= 70) {
-    overallComment += '全体水準は良好ですが、弱い項目を1〜2点改善すると見栄えが大きく伸びます。';
+    overallComment += sceneType === 'portrait'
+      ? '全体水準は良好ですが、人物訴求の弱い項目を整えるとさらに伸びます。'
+      : '全体水準は良好ですが、色と情報整理を詰めるとさらに見栄えが上がります。';
   } else if (scores.totalScore >= 50) {
-    overallComment += '基本は成立していますが、露出や背景整理に改善余地があります。';
+    overallComment += sceneType === 'portrait'
+      ? '基本は成立していますが、露出や背景整理に改善余地があります。'
+      : '基本は成立していますが、構図や情報量の整理に改善余地があります。';
   } else {
-    overallComment += '技術的な不足が目立つため、再撮影を前提に整えた方が早い状態です。';
+    overallComment += sceneType === 'portrait'
+      ? '人物写真としての訴求が弱いため、主題の見せ方から再設計した方が早い状態です。'
+      : '技術的な不足が目立つため、構図と整理感を意識した再撮影が有効です。';
   }
-  overallComment += ` 平均輝度${round(metrics.brightnessMean)}、コントラスト${round(metrics.contrast, 2)}、背景散らかり度${round(metrics.backgroundClutter, 2)}。 ${faceNote}`;
+  overallComment += ` 平均輝度${round(metrics.brightnessMean)}、コントラスト${round(metrics.contrast, 2)}、背景散らかり度${round(metrics.backgroundClutter, 2)}。`;
+  if (sceneType === 'portrait') {
+    overallComment += ` 顔検出${metrics.faceMetrics.faceCount}件、顔面積比${round(metrics.faceMetrics.faceAreaRatio * 100, 1)}%。`;
+  } else {
+    overallComment += ` 色再現${scores.colorScore}点、情報量${scores.informationScore}点です。`;
+  }
 
   return { strengthsComment, improvementComment, overallComment };
 }
@@ -1679,6 +1795,7 @@ async function sendRecordToWebhook(record) {
 
 function buildAnalysisMeta(metrics, scores) {
   return {
+    sceneType: scores.sceneType,
     brightnessMean: round(metrics.brightnessMean),
     brightnessVariance: round(metrics.brightnessVariance, 1),
     whiteClipRatio: round(metrics.overexposedRatio * 100, 1),
@@ -1783,6 +1900,7 @@ function renderScoreBars(scope = document) {
 function buildMetaLine(record) {
   const meta = record.analysisMeta || {};
   return [
+    `判定モード ${SCENE_TYPE_LABELS[record.sceneType || meta.sceneType || 'portrait'] || SCENE_TYPE_LABELS.portrait}`,
     Number.isFinite(meta.brightnessMean) ? `平均輝度 ${meta.brightnessMean}` : '',
     Number.isFinite(meta.whiteClipRatio) ? `白飛び ${meta.whiteClipRatio}%` : '',
     Number.isFinite(meta.blackClipRatio) ? `黒つぶれ ${meta.blackClipRatio}%` : '',
@@ -1799,12 +1917,14 @@ function buildDeliveryHtml(record) {
 
 function buildResultHTML(record) {
   const totalColor = getScoreColor(record.totalScore);
+  const sceneType = record.sceneType || record.analysisMeta?.sceneType || 'portrait';
+  const scoreItems = SCORE_ITEMS_BY_MODE[sceneType] || SCORE_ITEMS_BY_MODE.portrait;
   const badgeBackground = record.totalScore >= 85 ? 'var(--green-dim)'
     : record.totalScore >= 70 ? 'var(--blue-dim)'
       : record.totalScore >= 50 ? 'var(--amber-dim)'
         : 'var(--red-dim)';
 
-  const scoreCardsHtml = SCORE_ITEMS.map(item => {
+  const scoreCardsHtml = scoreItems.map(item => {
     const score = record[item.key];
     const color = getScoreColor(score);
     return `
@@ -1828,6 +1948,7 @@ function buildResultHTML(record) {
         <span class="total-unit">/100</span>
       </div>
       <span class="total-badge" style="color:${totalColor.text};background:${badgeBackground}">${totalColor.label}</span>
+      <p style="margin-top:14px;font-size:0.82rem;color:var(--text);font-weight:700">判定モード: ${SCENE_TYPE_LABELS[sceneType] || SCENE_TYPE_LABELS.portrait}</p>
       <p style="margin-top:14px;font-size:0.74rem;color:var(--text-muted)">${escapeHtml(buildMetaLine(record))}</p>
     </div>
 
