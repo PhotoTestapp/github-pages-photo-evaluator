@@ -3,43 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#f4f8fc">
+<meta name="theme-color" content="#0f0f11">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Photo Eval">
 <link rel="manifest" href="./manifest.webmanifest">
-<title>フォト評価ダッシュボード</title>
+<title>起動対象 | フォト評価 Mobile Ready</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f4f8fc;
-    --bg-soft: #eef5fb;
-    --surface: rgba(255,255,255,0.94);
-    --surface2: #f7fbff;
-    --surface3: #edf4fa;
-    --border: #d9e5f0;
-    --border-strong: #c7d8e8;
-    --text: #1f2d3d;
-    --text-muted: #607487;
-    --text-dim: #8ea0b2;
-    --accent: #4da3ff;
-    --accent-strong: #2e8cf2;
-    --accent-dim: rgba(77,163,255,0.12);
-    --accent-border: rgba(77,163,255,0.28);
-    --green: #18a36a;
-    --green-dim: rgba(24,163,106,0.12);
-    --amber: #e8a534;
-    --amber-dim: rgba(232,165,52,0.14);
-    --red: #dc5e6a;
-    --red-dim: rgba(220,94,106,0.12);
-    --blue: #3b82f6;
-    --blue-dim: rgba(59,130,246,0.12);
-    --shadow-sm: 0 8px 24px rgba(54, 84, 119, 0.08);
-    --shadow-md: 0 18px 48px rgba(39, 74, 112, 0.12);
-    --shadow-lg: 0 24px 70px rgba(39, 74, 112, 0.16);
-    --radius: 16px;
-    --radius-lg: 26px;
+    --bg: #0f0f11;
+    --surface: #18181c;
+    --surface2: #222228;
+    --border: #2e2e38;
+    --text: #f0f0f4;
+    --text-muted: #7a7a8e;
+    --text-dim: #3e3e52;
+    --accent: #e8ff47;
+    --accent-dim: rgba(232,255,71,0.12);
+    --accent-border: rgba(232,255,71,0.3);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.12);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.12);
+    --radius: 12px;
+    --radius-lg: 20px;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -48,34 +41,32 @@
 
   body {
     font-family: 'Noto Sans JP', sans-serif;
-    background:
-      radial-gradient(circle at top left, rgba(77,163,255,0.14), transparent 28%),
-      radial-gradient(circle at top right, rgba(111,214,186,0.14), transparent 22%),
-      linear-gradient(180deg, #f8fbff 0%, #f2f7fb 42%, #edf4fa 100%);
+    background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    line-height: 1.72;
+    line-height: 1.6;
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
+  /* ── ノイズテクスチャ背景 ── */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
-    background-image: linear-gradient(rgba(255,255,255,0.45), rgba(255,255,255,0.45));
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
     pointer-events: none;
     z-index: 0;
   }
 
+  /* ── ナビ ── */
   nav {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(255,255,255,0.78);
-    backdrop-filter: blur(18px);
-    border-bottom: 1px solid rgba(217,229,240,0.85);
-    box-shadow: 0 8px 24px rgba(58, 92, 126, 0.06);
-    padding: 0 22px;
+    background: rgba(15,15,17,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
   }
   .nav-inner {
     max-width: 860px;
@@ -83,138 +74,158 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 72px;
+    height: 56px;
   }
   .nav-logo {
-    font-weight: 800;
-    font-size: 1.02rem;
-    letter-spacing: 0.02em;
-    color: var(--text);
+    font-weight: 900;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    color: var(--accent);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
-  .nav-logo span { color: var(--accent-strong); font-weight: 700; }
+  .nav-logo span { color: var(--text-muted); font-weight: 400; }
   .nav-tabs {
     display: flex;
-    gap: 8px;
-    padding: 6px;
-    background: rgba(237,244,250,0.9);
-    border: 1px solid var(--border);
-    border-radius: 999px;
+    gap: 4px;
   }
   .tab-btn {
-    background: transparent;
+    background: none;
     border: none;
     color: var(--text-muted);
     font-family: inherit;
-    font-size: 0.82rem;
-    font-weight: 700;
-    padding: 8px 16px;
-    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s;
     letter-spacing: 0.03em;
   }
-  .tab-btn:hover {
-    background: rgba(255,255,255,0.85);
-    color: var(--text);
-  }
-  .tab-btn.active {
-    background: linear-gradient(135deg, var(--accent) 0%, #6ab9ff 100%);
-    color: #fff;
-    box-shadow: 0 8px 20px rgba(77,163,255,0.28);
-  }
+  .tab-btn:hover { background: var(--surface2); color: var(--text); }
+  .tab-btn.active { background: var(--accent); color: #0f0f11; font-weight: 700; }
 
+  /* ── レイアウト ── */
   .page { display: none; position: relative; z-index: 1; }
   .page.active { display: block; }
-  .container { max-width: 920px; margin: 0 auto; padding: 42px 22px 88px; }
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
 
+  /* ── タイポ ── */
   .page-title {
-    font-size: clamp(2rem, 5vw, 3rem);
-    font-weight: 800;
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    font-weight: 900;
     letter-spacing: -0.02em;
-    line-height: 1.08;
-    margin-bottom: 10px;
-    color: var(--text);
+    line-height: 1.1;
+    margin-bottom: 8px;
   }
   .page-sub {
     color: var(--text-muted);
-    font-size: 1rem;
-    margin-bottom: 18px;
-    max-width: 720px;
+    font-size: 0.875rem;
+    margin-bottom: 32px;
   }
   .page-sub.note {
-    margin-top: 0;
-    margin-bottom: 24px;
-    font-size: 0.88rem;
+    margin-top: -20px;
+    margin-bottom: 20px;
+    font-size: 0.78rem;
+  }
+
+  .inductive-note {
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    background: var(--blue-dim);
+    border: 1px solid rgba(96,165,250,0.22);
+    color: var(--text);
+    font-size: 0.82rem;
+    line-height: 1.7;
+  }
+  .control-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .control-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .control-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+  }
+  .control-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font: inherit;
+    padding: 12px 14px;
+    outline: none;
+  }
+  .control-help {
+    margin-top: 8px;
+    font-size: 0.76rem;
     color: var(--text-dim);
+    line-height: 1.6;
   }
 
   .launch-warning {
     display: none;
-    background: #fff5f6;
-    border: 1px solid rgba(220,94,106,0.22);
+    background: var(--red-dim);
+    border: 1px solid rgba(248,113,113,0.35);
     border-radius: var(--radius);
     color: var(--red);
-    padding: 16px 18px;
-    margin-bottom: 18px;
-    font-size: 0.92rem;
-    line-height: 1.8;
-    box-shadow: var(--shadow-sm);
+    padding: 16px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    line-height: 1.7;
   }
   .launch-warning.active {
     display: block;
   }
 
+  /* ── ドロップゾーン ── */
   #dropzone {
-    border: 2px dashed var(--border-strong);
+    border: 2px dashed var(--border);
     border-radius: var(--radius-lg);
-    padding: 56px 28px;
+    padding: 48px 24px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.24s ease;
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,251,255,0.96));
+    transition: all 0.2s;
+    background: var(--surface);
     position: relative;
     overflow: hidden;
-    box-shadow: var(--shadow-md);
   }
   #dropzone::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at top, rgba(77,163,255,0.12), transparent 62%);
+    background: radial-gradient(ellipse at center, var(--accent-dim) 0%, transparent 70%);
     opacity: 0;
-    transition: opacity 0.24s ease;
+    transition: opacity 0.3s;
   }
   #dropzone:hover, #dropzone.drag-over {
     border-color: var(--accent);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    background: var(--surface2);
   }
   #dropzone:hover::before, #dropzone.drag-over::before { opacity: 1; }
-  #dropzone.drag-over { transform: translateY(-2px) scale(1.01); }
+  #dropzone.drag-over { transform: scale(1.01); }
 
   #dropzone input[type="file"] { display: none; }
-  .drop-icon {
-    width: 74px;
-    height: 74px;
-    margin: 0 auto 18px;
-    display: grid;
-    place-items: center;
-    font-size: 2rem;
-    background: linear-gradient(135deg, rgba(77,163,255,0.18), rgba(111,214,186,0.16));
-    border-radius: 24px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-  }
-  .drop-title {
-    font-weight: 800;
-    font-size: 1.12rem;
-    margin-bottom: 8px;
-    color: var(--text);
-  }
-  .drop-sub { color: var(--text-muted); font-size: 0.9rem; }
+  .drop-icon { font-size: 3rem; margin-bottom: 12px; display: block; }
+  .drop-title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+  .drop-sub { color: var(--text-muted); font-size: 0.8rem; }
 
+  /* プレビュー */
   #preview-wrap {
     display: none;
     border-radius: var(--radius-lg);
@@ -222,17 +233,16 @@
     background: var(--surface);
     border: 1px solid var(--border);
     position: relative;
-    box-shadow: var(--shadow-md);
   }
   #preview-img {
     width: 100%;
-    max-height: 380px;
+    max-height: 320px;
     object-fit: contain;
     display: block;
-    background: linear-gradient(180deg, #eff6fc, #f7fbff);
+    background: #000;
   }
   .preview-bar {
-    padding: 16px 18px;
+    padding: 12px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -240,109 +250,90 @@
     flex-wrap: wrap;
     border-top: 1px solid var(--border);
   }
-  .preview-name {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    font-family: 'DM Mono', monospace;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: var(--surface3);
-  }
+  .preview-name { font-size: 0.8rem; color: var(--text-muted); font-family: 'DM Mono', monospace; }
   .preview-actions {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
   }
   .preview-change, .btn-secondary {
-    background: #fff;
+    background: none;
     border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 0.8rem;
-    padding: 10px 14px;
-    border-radius: 12px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 6px;
     cursor: pointer;
     font-family: inherit;
-    font-weight: 700;
-    transition: all 0.2s ease;
+    transition: all 0.15s;
     text-decoration: none;
-    box-shadow: 0 4px 12px rgba(60, 92, 126, 0.05);
   }
-  .preview-change:hover, .btn-secondary:hover {
-    border-color: var(--accent-border);
-    color: var(--accent-strong);
-    transform: translateY(-1px);
-    box-shadow: 0 12px 24px rgba(60, 92, 126, 0.08);
-  }
+  .preview-change:hover, .btn-secondary:hover { border-color: var(--text-muted); color: var(--text); }
 
+  /* ── ボタン ── */
   .btn-primary {
     width: 100%;
-    padding: 18px 20px;
-    background: linear-gradient(135deg, var(--accent) 0%, #67b7ff 100%);
-    color: #fff;
+    padding: 16px;
+    background: var(--accent);
+    color: #0f0f11;
     border: none;
-    border-radius: 18px;
+    border-radius: var(--radius);
     font-family: inherit;
-    font-size: 1rem;
-    font-weight: 800;
+    font-size: 0.95rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.22s ease;
+    transition: all 0.2s;
     letter-spacing: 0.04em;
     margin-top: 16px;
-    box-shadow: 0 18px 30px rgba(77,163,255,0.28);
   }
-  .btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 24px 42px rgba(77,163,255,0.34);
-  }
+  .btn-primary:hover:not(:disabled) { background: #f5ff70; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(232,255,71,0.25); }
   .btn-primary:active:not(:disabled) { transform: translateY(0); }
-  .btn-primary:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    box-shadow: none;
-  }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 
+  /* ── ローディング ── */
   #loading {
     display: none;
     text-align: center;
-    padding: 56px 0;
+    padding: 48px 0;
   }
   .loader {
-    width: 56px;
-    height: 56px;
-    border: 4px solid var(--surface3);
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     margin: 0 auto 16px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-label { color: var(--text-muted); font-size: 0.95rem; font-weight: 600; }
+  .loading-label { color: var(--text-muted); font-size: 0.875rem; }
   .loading-steps { display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
   .loading-step {
     width: 6px; height: 6px;
-    background: var(--border-strong);
+    background: var(--border);
     border-radius: 50%;
     animation: pulse-step 1.5s ease-in-out infinite;
   }
   .loading-step:nth-child(2) { animation-delay: 0.2s; }
   .loading-step:nth-child(3) { animation-delay: 0.4s; }
   @keyframes pulse-step {
-    0%, 100% { background: var(--border-strong); transform: scale(1); }
+    0%, 100% { background: var(--border); transform: scale(1); }
     50% { background: var(--accent); transform: scale(1.4); }
   }
 
+  /* ── エラー ── */
   #error-box {
     display: none;
-    background: #fff6f7;
-    border: 1px solid rgba(220,94,106,0.22);
+    background: var(--red-dim);
+    border: 1px solid rgba(248,113,113,0.3);
     border-radius: var(--radius);
-    padding: 16px 18px;
-    margin-top: 14px;
-    font-size: 0.92rem;
+    padding: 14px 16px;
+    margin-top: 12px;
+    font-size: 0.875rem;
     color: var(--red);
-    box-shadow: var(--shadow-sm);
   }
 
+  /* ── 結果エリア ── */
   #result-section { display: none; margin-top: 32px; }
 
   .result-header {
@@ -351,67 +342,50 @@
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 22px;
+    margin-bottom: 20px;
   }
-  .result-title {
-    font-weight: 800;
-    font-size: 1.08rem;
-    color: var(--text);
-  }
+  .result-title { font-weight: 700; font-size: 1rem; }
   .result-actions {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
   }
   .btn-reset {
-    background: #fff;
+    background: var(--surface2);
     border: 1px solid var(--border);
-    color: var(--text);
+    color: var(--text-muted);
     font-family: inherit;
-    font-size: 0.82rem;
-    padding: 10px 16px;
-    border-radius: 12px;
+    font-size: 0.8rem;
+    padding: 6px 14px;
+    border-radius: 8px;
     cursor: pointer;
-    font-weight: 700;
-    transition: all 0.2s ease;
-    box-shadow: 0 6px 18px rgba(60, 92, 126, 0.05);
+    transition: all 0.15s;
   }
-  .btn-reset:hover {
-    border-color: var(--accent-border);
-    color: var(--accent-strong);
-    transform: translateY(-1px);
-  }
+  .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* 総合スコア */
   .total-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 36px 26px;
+    padding: 32px 24px;
     text-align: center;
-    margin-bottom: 22px;
+    margin-bottom: 20px;
     position: relative;
     overflow: hidden;
     animation: fadeUp 0.4s ease-out;
-    box-shadow: var(--shadow-md);
   }
   .total-card::before {
     content: '';
     position: absolute;
-    top: -40px; left: 50%; transform: translateX(-50%);
-    width: 240px; height: 240px;
-    background: radial-gradient(circle, rgba(77,163,255,0.16) 0%, transparent 68%);
+    top: -60px; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, var(--accent-dim) 0%, transparent 70%);
   }
-  .total-label {
-    font-size: 0.76rem;
-    color: var(--text-muted);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-    font-weight: 700;
-  }
+  .total-label { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
   .total-number {
     font-size: clamp(4rem, 15vw, 6rem);
-    font-weight: 800;
+    font-weight: 900;
     line-height: 1;
     color: var(--accent);
     font-family: 'DM Mono', monospace;
@@ -420,141 +394,282 @@
   .total-number.score-good { color: var(--green); }
   .total-number.score-avg  { color: var(--amber); }
   .total-number.score-poor { color: var(--red); }
-  .total-unit { font-size: 1.2rem; color: var(--text-muted); margin-left: 6px; font-weight: 500; }
+  .total-unit { font-size: 1.2rem; color: var(--text-muted); margin-left: 4px; font-weight: 400; }
   .total-badge {
     display: inline-block;
-    margin-top: 16px;
-    padding: 8px 16px;
-    border-radius: 999px;
-    font-size: 0.82rem;
+    margin-top: 12px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.06em;
   }
 
+  /* 項目スコアグリッド */
   .scores-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 14px;
-    margin-bottom: 24px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
     animation: fadeUp 0.4s ease-out 0.1s both;
   }
   .score-item {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 18px 18px 16px;
-    transition: all 0.2s ease;
-    box-shadow: var(--shadow-sm);
+    padding: 14px 16px;
+    transition: border-color 0.15s;
   }
-  .score-item:hover {
-    border-color: var(--accent-border);
-    transform: translateY(-2px);
-  }
+  .score-item:hover { border-color: var(--text-dim); }
   .score-item-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
   .score-item-label {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.84rem;
+    gap: 6px;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-muted);
   }
   .score-item-num {
     font-family: 'DM Mono', monospace;
-    font-size: 1.45rem;
-    font-weight: 700;
+    font-size: 1.3rem;
+    font-weight: 500;
   }
   .score-bar-track {
-    height: 8px;
-    background: var(--surface3);
-    border-radius: 999px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
     overflow: hidden;
   }
   .score-bar-fill {
     height: 100%;
-    border-radius: 999px;
+    border-radius: 2px;
     transition: width 1s cubic-bezier(0.16,1,0.3,1);
     width: 0;
   }
 
+  /* コメント */
   .comments-section {
     display: grid;
-    gap: 14px;
+    gap: 10px;
     animation: fadeUp 0.4s ease-out 0.2s both;
   }
   .comment-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 18px 18px 18px 16px;
+    padding: 16px;
     display: flex;
-    gap: 14px;
-    box-shadow: var(--shadow-sm);
+    gap: 12px;
   }
-  .comment-icon {
-    width: 40px;
-    height: 40px;
-    display: grid;
-    place-items: center;
-    background: var(--surface3);
-    border-radius: 12px;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-  .comment-label {
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
+  .comment-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+  .comment-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
   .comment-label.label-good { color: var(--green); }
   .comment-label.label-imp  { color: var(--amber); }
   .comment-label.label-all  { color: var(--blue); }
-  .comment-text { font-size: 0.92rem; color: var(--text-muted); line-height: 1.8; }
+  .comment-text { font-size: 0.875rem; color: var(--text-muted); line-height: 1.7; }
+
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+  }
+  .section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .summary-line {
+    font-size: 0.92rem;
+    color: var(--text);
+    line-height: 1.8;
+  }
+  .bullet-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+  .bullet-list li::marker {
+    color: var(--accent);
+  }
+  .metric-list {
+    display: grid;
+    gap: 10px;
+  }
+  .metric-row {
+    display: grid;
+    grid-template-columns: 140px 56px 1fr;
+    gap: 10px;
+    align-items: start;
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+  .metric-name {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .metric-score {
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .metric-reason {
+    color: var(--text-muted);
+  }
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .mini-item {
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .mini-label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .mini-value {
+    font-size: 0.9rem;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .reference-list {
+    display: grid;
+    gap: 10px;
+  }
+  .reference-link {
+    display: inline-block;
+    margin-top: 4px;
+    color: var(--blue);
+    text-decoration: none;
+    word-break: break-word;
+  }
+  .reference-link:hover {
+    text-decoration: underline;
+  }
+
+  .delivery-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 16px;
+    animation: fadeUp 0.4s ease-out 0.25s both;
+  }
+  .delivery-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .delivery-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .delivery-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .delivery-pill.pending { background: var(--surface2); color: var(--text-muted); }
+  .delivery-pill.success { background: var(--green-dim); color: var(--green); }
+  .delivery-pill.error { background: var(--red-dim); color: var(--red); }
+  .delivery-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .delivery-meta-item {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .delivery-meta-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .delivery-meta-value {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    word-break: break-word;
+  }
+  .delivery-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .delivery-note {
+    margin-top: 10px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
 
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
+  /* ── 履歴ページ ── */
   .history-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 22px;
-    gap: 12px;
-    flex-wrap: wrap;
+    margin-bottom: 24px;
   }
-  .history-count { color: var(--text-muted); font-size: 0.9rem; font-weight: 700; }
+  .history-count { color: var(--text-muted); font-size: 0.8rem; }
   .btn-clear-all {
-    background: #fff;
-    border: 1px solid rgba(220,94,106,0.18);
+    background: none;
+    border: 1px solid rgba(248,113,113,0.3);
     color: var(--red);
     font-family: inherit;
-    font-size: 0.8rem;
-    padding: 10px 14px;
-    border-radius: 12px;
+    font-size: 0.75rem;
+    padding: 5px 12px;
+    border-radius: 8px;
     cursor: pointer;
-    font-weight: 700;
-    transition: all 0.2s ease;
-    box-shadow: 0 6px 18px rgba(60, 92, 126, 0.05);
+    transition: all 0.15s;
   }
-  .btn-clear-all:hover {
-    background: #fff5f6;
-    transform: translateY(-1px);
-  }
+  .btn-clear-all:hover { background: var(--red-dim); }
 
   #history-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
   }
   .history-card {
     background: var(--surface);
@@ -562,19 +677,14 @@
     border-radius: var(--radius);
     overflow: hidden;
     cursor: pointer;
-    transition: all 0.22s ease;
+    transition: all 0.2s;
     animation: fadeUp 0.3s ease-out both;
-    box-shadow: var(--shadow-sm);
   }
-  .history-card:hover {
-    border-color: var(--accent-border);
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-  }
+  .history-card:hover { border-color: var(--accent-border); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
   .history-thumb {
     aspect-ratio: 4/3;
     overflow: hidden;
-    background: linear-gradient(180deg, #eff6fc, #f7fbff);
+    background: var(--surface2);
     position: relative;
   }
   .history-thumb img {
@@ -585,80 +695,75 @@
   .history-card:hover .history-thumb img { transform: scale(1.04); }
   .history-score-badge {
     position: absolute;
-    top: 10px; right: 10px;
-    padding: 6px 10px;
-    border-radius: 999px;
+    top: 8px; right: 8px;
+    padding: 3px 8px;
+    border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 700;
     font-family: 'DM Mono', monospace;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 18px rgba(31,45,61,0.12);
+    backdrop-filter: blur(8px);
   }
-  .history-info { padding: 16px; }
+  .history-info { padding: 12px; }
   .history-info-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
-    gap: 8px;
+    margin-bottom: 6px;
   }
   .history-score-big {
     font-family: 'DM Mono', monospace;
-    font-size: 1.56rem;
-    font-weight: 700;
+    font-size: 1.5rem;
+    font-weight: 500;
   }
-  .history-date { font-size: 0.74rem; color: var(--text-dim); font-family: 'DM Mono', monospace; }
+  .history-date { font-size: 0.7rem; color: var(--text-dim); font-family: 'DM Mono', monospace; }
   .history-comment {
-    font-size: 0.82rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
-    line-height: 1.65;
+    line-height: 1.5;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   .history-card-footer {
     display: flex;
-    gap: 8px;
+    gap: 6px;
   }
   .btn-detail, .btn-delete {
     flex: 1;
-    padding: 10px 0;
-    border-radius: 10px;
+    padding: 5px 0;
+    border-radius: 6px;
     font-family: inherit;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
     border: none;
-    transition: all 0.2s ease;
+    transition: all 0.15s;
   }
-  .btn-detail { background: var(--surface3); color: var(--text); }
-  .btn-detail:hover { background: var(--accent); color: #fff; }
-  .btn-delete { background: #fff5f6; color: var(--red); }
+  .btn-detail { background: var(--surface2); color: var(--text-muted); }
+  .btn-detail:hover { background: var(--accent); color: #0f0f11; }
+  .btn-delete { background: var(--red-dim); color: var(--red); }
   .btn-delete:hover { background: var(--red); color: #fff; }
 
   #history-empty {
     display: none;
     text-align: center;
-    padding: 88px 20px;
-    background: rgba(255,255,255,0.7);
-    border: 1px dashed var(--border-strong);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
+    padding: 80px 20px;
   }
-  .empty-icon { font-size: 3.5rem; margin-bottom: 16px; opacity: 0.45; }
-  .empty-text { color: var(--text-muted); font-size: 0.95rem; }
+  .empty-icon { font-size: 3.5rem; margin-bottom: 16px; opacity: 0.3; }
+  .empty-text { color: var(--text-muted); font-size: 0.875rem; }
 
+  /* ── 詳細モーダル ── */
   #modal-overlay {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(46,76,112,0.18);
-    backdrop-filter: blur(10px);
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
     z-index: 200;
     overflow-y: auto;
-    padding: 24px;
+    padding: 20px;
   }
   #modal-overlay.active { display: flex; align-items: flex-start; justify-content: center; }
   #modal-box {
@@ -666,11 +771,10 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 700px;
+    max-width: 640px;
     margin: auto;
     overflow: hidden;
     animation: modalIn 0.25s cubic-bezier(0.16,1,0.3,1);
-    box-shadow: 0 30px 80px rgba(39,74,112,0.18);
   }
   @keyframes modalIn {
     from { opacity: 0; transform: scale(0.95) translateY(10px); }
@@ -680,67 +784,46 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 22px;
+    padding: 16px 20px;
     border-bottom: 1px solid var(--border);
-    background: rgba(247,251,255,0.9);
   }
-  .modal-title { font-weight: 800; font-size: 0.96rem; color: var(--text); }
+  .modal-title { font-weight: 700; font-size: 0.9rem; }
   .modal-close {
-    background: #fff;
-    border: 1px solid var(--border);
+    background: none;
+    border: none;
     color: var(--text-muted);
-    font-size: 1rem;
+    font-size: 1.2rem;
     cursor: pointer;
-    padding: 8px 10px;
+    padding: 4px;
     line-height: 1;
-    border-radius: 12px;
-    transition: all 0.2s ease;
+    border-radius: 6px;
+    transition: all 0.15s;
   }
-  .modal-close:hover {
-    border-color: var(--accent-border);
-    color: var(--accent-strong);
-    transform: translateY(-1px);
-  }
-  .modal-img {
-    width: 100%;
-    max-height: 360px;
-    object-fit: contain;
-    background: linear-gradient(180deg, #eff6fc, #f7fbff);
-    display: block;
-  }
-  .modal-body { padding: 24px; }
+  .modal-close:hover { background: var(--surface2); color: var(--text); }
+  .modal-img { width: 100%; max-height: 300px; object-fit: contain; background: #000; display: block; }
+  .modal-body { padding: 20px; }
 
+  /* スコアバーの色 */
   .bar-excellent { background: var(--green); }
   .bar-good      { background: var(--blue); }
   .bar-avg       { background: var(--amber); }
   .bar-poor      { background: var(--red); }
 
+  /* レスポンシブ */
   @media (max-width: 600px) {
-    nav { padding: 0 14px; }
-    .nav-inner {
-      min-height: 68px;
-      align-items: flex-start;
-      flex-direction: column;
-      justify-content: center;
-      gap: 10px;
-      padding: 10px 0;
+    .control-grid,
+    .mini-grid,
+    .metric-row {
+      grid-template-columns: 1fr;
     }
-    .page-title { font-size: 1.9rem; }
-    .page-sub { font-size: 0.94rem; }
-    .scores-grid { grid-template-columns: 1fr; }
-    #history-grid { grid-template-columns: 1fr; }
-    .container { padding: 28px 16px 72px; }
+    .scores-grid { grid-template-columns: 1fr 1fr; }
+    #history-grid { grid-template-columns: 1fr 1fr; }
+    .container { padding: 24px 16px 60px; }
     .preview-bar, .result-header { align-items: flex-start; }
-    .result-actions, .preview-actions { width: 100%; }
-    .btn-secondary, .btn-reset { flex: 1 1 auto; text-align: center; justify-content: center; }
-    .comment-card { padding: 16px; }
-    .modal-body { padding: 18px; }
   }
   @media (max-width: 380px) {
     .scores-grid { grid-template-columns: 1fr; }
     #history-grid { grid-template-columns: 1fr; }
-    .nav-tabs { width: 100%; justify-content: space-between; }
-    .tab-btn { flex: 1; }
   }
 </style>
 </head>
@@ -761,8 +844,36 @@
 <div id="page-evaluate" class="page active">
   <div class="container">
     <h1 class="page-title">写真を評価する / 起動対象ファイル</h1>
-    <p class="page-sub">写真を選ぶと評価後にGoogle Driveへ自動保存します。構図・明るさ・ピントなど7項目でスコアリングします</p>
+    <p class="page-sub">写真を選ぶと、国際・国内・SNS系フォトコンの過去受賞傾向を模した帰納的評価を行い、Google Driveへ自動保存します。</p>
     <p class="page-sub note">JPG・JPEG・PNG・WebP・HEIFに対応します。HEIFはお使いのブラウザによってはプレビューや解析ができない場合があります。</p>
+    <div class="inductive-note">
+      この評価は公式審査基準ではなく、主要フォトコン受賞作の共通傾向をもとにした「受賞傾向ベースの帰納的評価」です。選んだ審査思想とジャンル内での相対指標として読み取ってください。
+    </div>
+
+    <div class="control-grid">
+      <div class="control-card">
+        <label class="control-label" for="review-philosophy">審査思想</label>
+        <select id="review-philosophy" class="control-select">
+          <option value="international">国際コンテスト向け</option>
+          <option value="domestic">国内公募展向け</option>
+          <option value="sns">SNS最適化向け</option>
+        </select>
+        <p class="control-help">国際は独創性、国内は完成度、SNSは一目の印象とトリミング耐性を重視します。</p>
+      </div>
+      <div class="control-card">
+        <label class="control-label" for="genre-select">ジャンル</label>
+        <select id="genre-select" class="control-select">
+          <option value="landscape">風景</option>
+          <option value="portrait">ポートレート</option>
+          <option value="snapshot">スナップ</option>
+          <option value="wildlife">動物</option>
+          <option value="architecture">建築</option>
+          <option value="art">アート</option>
+          <option value="other">その他</option>
+        </select>
+        <p class="control-help">顔情報はポートレート時のみ補助利用し、それ以外では構図・光・技術・視線誘導を優先します。</p>
+      </div>
+    </div>
 
     <div id="launch-warning" class="launch-warning"></div>
 
@@ -856,83 +967,94 @@
 
 
 <script>
-const SCORE_ITEMS_BY_MODE = {
-  portrait: [
-    { label: '構図', key: 'compositionScore', icon: '🖼️' },
-    { label: '明るさ', key: 'brightnessScore', icon: '☀️' },
-    { label: 'ピント', key: 'focusScore', icon: '🔍' },
-    { label: '表情', key: 'expressionScore', icon: '😊' },
-    { label: '背景', key: 'backgroundScore', icon: '🌿' },
-    { label: '清潔感', key: 'cleanlinessScore', icon: '✨' },
-    { label: '印象', key: 'impressionScore', icon: '💫' },
-  ],
-  nonPortrait: [
-    { label: '構図', key: 'compositionScore', icon: '🖼️' },
-    { label: '明るさ', key: 'brightnessScore', icon: '☀️' },
-    { label: 'ピント', key: 'focusScore', icon: '🔍' },
-    { label: '色再現', key: 'colorScore', icon: '🎨' },
-    { label: '背景整理', key: 'organizationScore', icon: '🧩' },
-    { label: '情報量', key: 'informationScore', icon: '📊' },
-    { label: '印象', key: 'impressionScore', icon: '💫' },
-  ],
+const CONTEST_SCORE_ITEMS = [
+  { label: '構図', key: 'compositionScore', icon: '🖼️' },
+  { label: '光', key: 'lightScore', icon: '💡' },
+  { label: '色', key: 'colorScore', icon: '🎨' },
+  { label: '表現力', key: 'expressionScore', icon: '🫧' },
+  { label: '技術', key: 'technicalScore', icon: '🛠️' },
+  { label: 'ビジュアルウエイト', key: 'visualWeightScore', icon: '⚖️' },
+];
+
+const REVIEW_PHILOSOPHY_LABELS = {
+  international: '国際コンテスト向け',
+  domestic: '国内公募展向け',
+  sns: 'SNS最適化向け',
 };
 
-const SCENE_TYPE_LABELS = {
-  portrait: '人物写真',
-  nonPortrait: '非人物写真',
+const GENRE_LABELS = {
+  landscape: '風景',
+  portrait: 'ポートレート',
+  snapshot: 'スナップ',
+  wildlife: '動物',
+  architecture: '建築',
+  art: 'アート',
+  other: 'その他',
 };
 
-const ITEM_COMMENT_MAP = {
-  compositionScore: {
-    high: ['左右・上下のバランスが安定し、主題配置もまとまっています。', '三分割構図との整合が高く、視線誘導が自然です。'],
-    mid: ['構図は成立していますが、主題位置を少し動かすと伸びます。', '全体のバランスは悪くありませんが、余白の整理で印象が上がります。'],
-    low: ['主題の位置が曖昧です。三分割線付近へ寄せると改善しやすいです。', '左右または上下の重心が偏っています。撮影位置やトリミングを見直してください。'],
+const REVIEW_PHILOSOPHY_CONFIG = {
+  international: {
+    label: REVIEW_PHILOSOPHY_LABELS.international,
+    reason: '国際フォトコン受賞傾向で強い、独創性・物語性・視覚的フックを重めに評価',
+    passScale: 1.08,
+    nextDirection: '独創性や物語性をさらに押し出し、「見たことがないが成立している」方向へ寄せる',
   },
-  brightnessScore: {
-    high: ['露出が安定しており、白飛び・黒つぶれがよく抑えられています。', '平均輝度とコントラストのバランスが良く、見やすい明るさです。'],
-    mid: ['明るさは許容範囲ですが、露出補正でさらに見栄えが上がります。', '大きな破綻はありませんが、ハイライトと暗部の扱いに改善余地があります。'],
-    low: ['露出が極端です。白飛びや黒つぶれを抑える再撮影が必要です。', '平均輝度のズレが大きく、明るさ評価を下げています。'],
+  domestic: {
+    label: REVIEW_PHILOSOPHY_LABELS.domestic,
+    reason: '国内公募展で好まれやすい、完成度・主題の普遍性・破綻の少なさを重めに評価',
+    passScale: 1,
+    nextDirection: '完成度や主題の普遍性を高め、鑑賞者に意味が伝わる整い方を磨く',
   },
-  focusScore: {
-    high: ['エッジ量とシャープネスが十分で、主題の輪郭が明瞭です。', 'ピントの芯があり、情報がきれいに残っています。'],
-    mid: ['大きなピンボケではありませんが、やや甘さがあります。', '輪郭情報は取れていますが、もう少しシャープさが欲しい状態です。'],
-    low: ['エッジ量が不足しており、ピントが甘く見えます。', 'シャープネスが低く、手ブレかピントずれの可能性があります。'],
+  sns: {
+    label: REVIEW_PHILOSOPHY_LABELS.sns,
+    reason: 'SNSでの初見インパクトとトリミング耐性、視線停止力を重めに評価',
+    passScale: 0.92,
+    nextDirection: '一目の印象とトリミング耐性を高め、縮小表示でも主題が勝つ設計へ寄せる',
   },
-  colorScore: {
-    high: ['色の乗り方が自然で、白飛びや黒つぶれの影響も少ないです。', '色再現とコントラストの両立ができており、見栄えが安定しています。'],
-    mid: ['色は出ていますが、ハイライトや彩度の調整でさらに整います。', '色再現は平均的で、露出の詰めで印象が上がりやすい状態です。'],
-    low: ['色再現が不安定で、白飛びや黒つぶれが見栄えを下げています。', '彩度やコントラストのバランスが崩れ、色の説得力が弱くなっています。'],
-  },
-  expressionScore: {
-    high: ['顔検出結果と主題のまとまりから見て、人物訴求力が高いです。', '人物がしっかり主題化されており、表情項目は高評価です。'],
-    mid: ['表情項目は平均的です。顔の向きや距離感を整えると伸びます。', '顔は捉えられていますが、印象づけはまだ改善できます。'],
-    low: ['顔検出が弱いか、主題化が不足しているため表情評価が伸びていません。', '人物の見せ方が弱く、顔位置や距離感の再設計が必要です。'],
-  },
-  backgroundScore: {
-    high: ['背景の情報量が抑えられ、主題分離ができています。', '背景が整理されており、視線が主題へ素直に集まります。'],
-    mid: ['背景は許容範囲ですが、やや情報量が多めです。', '背景の整理は概ねできていますが、余計な要素を減らす余地があります。'],
-    low: ['背景の情報量が多く、主題より先に周辺が目に入ります。', '背景の散らかり度が高く、場所変更や整理が必要です。'],
-  },
-  organizationScore: {
-    high: ['不要要素が抑えられ、画面整理ができています。', '背景と主題の役割分担が明快で、視線誘導が安定しています。'],
-    mid: ['大きな破綻はありませんが、周辺整理でさらに見やすくなります。', '背景整理は平均的で、少し要素を減らすと主題が立ちやすくなります。'],
-    low: ['周辺要素が多く、背景整理の不足が目立ちます。', '背景の散らかりが強く、主題の見え方を弱めています。'],
-  },
-  cleanlinessScore: {
-    high: ['ノイズが少なく、画面全体に整頓感があります。', '視覚ノイズが抑えられ、清潔感のある見え方です。'],
-    mid: ['清潔感は平均的です。背景整理やノイズ低減で改善できます。', '大きな崩れはありませんが、細部の整頓で印象が上がります。'],
-    low: ['ノイズや背景の散らかりが清潔感を下げています。', '画面内の不要情報が多く、清潔感評価が低く出ています。'],
-  },
-  informationScore: {
-    high: ['情報量が適切で、見どころが整理されています。', '不足も過多もなく、内容が伝わりやすい密度です。'],
-    mid: ['情報量は標準的です。主題の絞り込みで完成度が上がります。', '見どころはありますが、情報の整理でもう一段見やすくなります。'],
-    low: ['情報量の偏りが大きく、写真の意図が伝わりにくい状態です。', '要素が多すぎるか少なすぎるため、見どころの整理が必要です。'],
-  },
-  impressionScore: {
-    high: ['第一印象が強く、総合的な完成度が高い一枚です。', '構図・明るさ・主題性のバランスが良く、印象に残りやすい写真です。'],
-    mid: ['印象は平均以上ですが、決定力はまだ伸ばせます。', '破綻は少ないものの、強い記憶点はあと一歩です。'],
-    low: ['主題の押し出しが弱く、印象形成が不足しています。', '構図や背景の再設計で、印象スコアを大きく改善できます。'],
-  },
+};
+
+const PHILOSOPHY_WEIGHTS = {
+  international: { compositionScore: 0.18, lightScore: 0.17, colorScore: 0.13, expressionScore: 0.22, technicalScore: 0.12, visualWeightScore: 0.18 },
+  domestic:      { compositionScore: 0.19, lightScore: 0.18, colorScore: 0.14, expressionScore: 0.15, technicalScore: 0.19, visualWeightScore: 0.15 },
+  sns:           { compositionScore: 0.18, lightScore: 0.14, colorScore: 0.16, expressionScore: 0.16, technicalScore: 0.12, visualWeightScore: 0.24 },
+};
+
+const GENRE_WEIGHT_MODIFIERS = {
+  landscape:    { compositionScore: 1.08, lightScore: 1.18, colorScore: 1.15, expressionScore: 0.95, technicalScore: 0.94, visualWeightScore: 1.08 },
+  portrait:     { compositionScore: 0.98, lightScore: 1.02, colorScore: 0.92, expressionScore: 1.22, technicalScore: 0.98, visualWeightScore: 0.96 },
+  snapshot:     { compositionScore: 1.02, lightScore: 0.96, colorScore: 0.96, expressionScore: 1.18, technicalScore: 0.9, visualWeightScore: 1.08 },
+  wildlife:     { compositionScore: 1.02, lightScore: 1.02, colorScore: 0.98, expressionScore: 1.08, technicalScore: 1.16, visualWeightScore: 1.02 },
+  architecture: { compositionScore: 1.2, lightScore: 0.92, colorScore: 0.95, expressionScore: 0.88, technicalScore: 1.08, visualWeightScore: 1.1 },
+  art:          { compositionScore: 0.98, lightScore: 1.02, colorScore: 1.12, expressionScore: 1.28, technicalScore: 0.88, visualWeightScore: 1.06 },
+  other:        { compositionScore: 1, lightScore: 1, colorScore: 1, expressionScore: 1, technicalScore: 1, visualWeightScore: 1 },
+};
+
+const GENRE_BASELINES = {
+  landscape: { average100: 71, passBase: 28 },
+  portrait: { average100: 69, passBase: 31 },
+  snapshot: { average100: 67, passBase: 34 },
+  wildlife: { average100: 70, passBase: 30 },
+  architecture: { average100: 68, passBase: 32 },
+  art: { average100: 66, passBase: 36 },
+  other: { average100: 68, passBase: 33 },
+};
+
+const CONTEST_REFERENCE_LIBRARY = {
+  international: [
+    { name: 'Sony World Photography Awards', url: 'https://www.worldphoto.org/', tags: ['landscape', 'portrait', 'snapshot', 'wildlife', 'architecture', 'art', 'other'] },
+    { name: 'Nikon Photo Contest', url: 'https://www.nikon-photocontest.com/en/', tags: ['landscape', 'portrait', 'snapshot', 'wildlife', 'art', 'other'] },
+    { name: 'National Geographic Photography', url: 'https://www.nationalgeographic.com/photography/', tags: ['landscape', 'wildlife', 'snapshot', 'other'] },
+  ],
+  domestic: [
+    { name: '東京カメラ部10選', url: 'https://tokyocameraclub.com/', tags: ['landscape', 'portrait', 'snapshot', 'wildlife', 'architecture', 'other'] },
+    { name: '日本写真協会 公募情報', url: 'https://www.psj.or.jp/', tags: ['landscape', 'portrait', 'snapshot', 'architecture', 'art', 'other'] },
+    { name: 'CAPA フォトコンテスト', url: 'https://capa.getnavi.jp/', tags: ['landscape', 'portrait', 'snapshot', 'wildlife', 'other'] },
+  ],
+  sns: [
+    { name: '東京カメラ部 キャンペーン', url: 'https://tokyocameraclub.com/', tags: ['landscape', 'portrait', 'snapshot', 'architecture', 'other'] },
+    { name: 'Instagram Creators', url: 'https://about.instagram.com/creators', tags: ['landscape', 'portrait', 'snapshot', 'art', 'other'] },
+    { name: '500px Community', url: 'https://500px.com/', tags: ['landscape', 'portrait', 'wildlife', 'architecture', 'art', 'other'] },
+  ],
 };
 
 const STORAGE_KEYS = {
@@ -1490,228 +1612,265 @@ function computeFaceMetrics(faces, width, height) {
   };
 }
 
-function detectSceneType(metrics) {
-  const faceMetrics = metrics.faceMetrics;
-  if (!faceMetrics.hasFace) return 'nonPortrait';
-
-  const strongFace = faceMetrics.faceAreaRatio >= 0.05;
-  const mediumFace = faceMetrics.faceAreaRatio >= 0.032 && faceMetrics.faceCenteredness >= 0.58;
-  const centeredSingleFace = faceMetrics.faceAreaRatio >= 0.024 && faceMetrics.faceCenteredness >= 0.74 && faceMetrics.faceCount <= 2;
-
-  return (strongFace || mediumFace || centeredSingleFace) ? 'portrait' : 'nonPortrait';
+function getSelectedReviewPhilosophy() {
+  return document.getElementById('review-philosophy')?.value || 'international';
 }
 
-function deriveScoresFromMetrics(metrics) {
-  const brightnessScore = clamp(round(
-    scoreFromDeviation(metrics.brightnessMean, 138, 22, 62) * 0.34 +
-    scoreFromDeviation(metrics.brightnessStd, 58, 18, 48) * 0.18 +
-    scoreFromDeviation(metrics.contrast, 0.42, 0.16, 0.44) * 0.18 +
-    (1 - clamp(metrics.overexposedRatio / 0.11, 0, 1)) * 15 +
-    (1 - clamp(metrics.underexposedRatio / 0.14, 0, 1)) * 15
-  ), 16, 98);
+function getSelectedGenre() {
+  return document.getElementById('genre-select')?.value || 'other';
+}
 
-  const focusScore = clamp(round(
-    normalize(metrics.meanEdge, 8, 46) * 34 +
-    normalize(metrics.dominantEdge, 18, 96) * 22 +
-    normalize(metrics.sharpnessRaw, 6, 30) * 32 +
-    (1 - normalize(metrics.noiseEstimate, 3, 18)) * 12
-  ), 14, 98);
+function normalizeWeights(baseWeights, modifiers) {
+  const entries = Object.entries(baseWeights).map(([key, value]) => [key, value * (modifiers[key] || 1)]);
+  const total = entries.reduce((sum, [, value]) => sum + value, 0) || 1;
+  return Object.fromEntries(entries.map(([key, value]) => [key, value / total]));
+}
 
-  const sceneType = detectSceneType(metrics);
-  const subjectCenterSupport = 1 - clamp(
-    Math.hypot(metrics.subjectXRatio - 0.5, metrics.subjectYRatio - 0.5) / 0.72,
-    0,
+function getRelativeGenreBaseline(genre) {
+  return GENRE_BASELINES[genre] || GENRE_BASELINES.other;
+}
+
+function buildContestReason(reviewPhilosophy, genre, metrics, scores) {
+  const philosophy = REVIEW_PHILOSOPHY_CONFIG[reviewPhilosophy] || REVIEW_PHILOSOPHY_CONFIG.international;
+  const strongLight = scores.lightScore >= 78;
+  const strongExpression = scores.expressionScore >= 78;
+  const strongWeight = scores.visualWeightScore >= 78;
+  const genreLabel = GENRE_LABELS[genre] || GENRE_LABELS.other;
+
+  if (reviewPhilosophy === 'international') {
+    if (strongExpression || strongWeight) return `${genreLabel}として視線停止力と物語の余白があり、国際系が好む「一枚の押し」が出ているため`;
+    return `${genreLabel}として独創性余地を見ながらも、視覚的な引力と主題の強さを優先して見る思想に近いため`;
+  }
+  if (reviewPhilosophy === 'domestic') {
+    if (strongLight && scores.technicalScore >= 76) return `${genreLabel}として露出精度と破綻の少なさが安定しており、国内公募展寄りの完成度評価に相性が良いため`;
+    return `${genreLabel}として主題の普遍性と完成度を丁寧に見る国内公募展寄りの読み方が適切なため`;
+  }
+  if (strongWeight) return `${genreLabel}として縮小表示でも主題が勝ちやすく、SNSで重要な一目の印象とトリミング耐性が見やすいため`;
+  return `${genreLabel}として第一印象と視線誘導を優先評価するSNS寄りの読み方が妥当なため`;
+}
+
+function deriveContestScores(metrics, reviewPhilosophy, genre) {
+  const weights = normalizeWeights(
+    PHILOSOPHY_WEIGHTS[reviewPhilosophy] || PHILOSOPHY_WEIGHTS.international,
+    GENRE_WEIGHT_MODIFIERS[genre] || GENRE_WEIGHT_MODIFIERS.other
+  );
+  const sceneType = genre === 'portrait' ? 'portrait' : 'nonPortrait';
+  const faceSupport = genre === 'portrait'
+    ? normalize(metrics.faceMetrics.faceAreaRatio, 0.02, 0.18) * 0.45 + metrics.faceMetrics.faceCenteredness * 0.35 + metrics.faceMetrics.faceStability * 0.2
+    : 0;
+  const subjectCenterSupport = 1 - clamp(Math.hypot(metrics.subjectXRatio - 0.5, metrics.subjectYRatio - 0.5) / 0.74, 0, 1);
+  const peripheralRatio = metrics.edgeBands.peripheral / Math.max(1, metrics.edgeBands.total);
+  const symmetrySupport = (metrics.leftRightBalance + metrics.topBottomBalance) / 2;
+  const tonalSafety = 1 - clamp((metrics.overexposedRatio + metrics.underexposedRatio) / 0.22, 0, 1);
+
+  const compositionScore = clamp(round(
+    metrics.leftRightBalance * 21 +
+    metrics.topBottomBalance * 16 +
+    metrics.thirdsAlignment * 24 +
+    normalize(metrics.subjectConcentration, 0.03, 0.14) * 16 +
+    (1 - clamp(Math.abs(metrics.subjectXRatio - 0.38) / 0.38, 0, 1)) * 9 +
+    subjectCenterSupport * 14
+  ), 24, 98);
+
+  const lightScore = clamp(round(
+    scoreFromDeviation(metrics.brightnessMean, genre === 'architecture' ? 150 : 138, 24, 66) * 0.28 +
+    scoreFromDeviation(metrics.brightnessStd, genre === 'art' ? 64 : 58, 19, 50) * 0.16 +
+    scoreFromDeviation(metrics.contrast, reviewPhilosophy === 'sns' ? 0.48 : 0.42, 0.16, 0.42) * 0.18 +
+    tonalSafety * 24 +
+    normalize(metrics.entropy, 5.2, 7.3) * 14
+  ), 18, 98);
+
+  const colorScore = clamp(round(
+    scoreFromDeviation(metrics.saturationRatio, reviewPhilosophy === 'sns' ? 0.23 : 0.18, 0.08, 0.22) * 0.3 +
+    scoreFromDeviation(metrics.contrast, 0.42, 0.14, 0.38) * 0.2 +
+    tonalSafety * 18 +
+    normalize(metrics.entropy, 5.2, 7.3) * 14 +
+    (1 - normalize(metrics.noiseEstimate, 3, 18)) * 10 +
+    (1 - clamp(Math.abs(metrics.brightnessMean - 138) / 138, 0, 1)) * 8
+  ), 20, 98);
+
+  const expressionBase = genre === 'portrait'
+    ? faceSupport * 54 + normalize(metrics.subjectConcentration, 0.03, 0.15) * 16 + normalize(metrics.entropy, 5, 7.4) * 16 + subjectCenterSupport * 14
+    : normalize(metrics.subjectConcentration, 0.03, 0.15) * 24 +
+      normalize(metrics.entropy, 5.2, 7.5) * 22 +
+      (1 - metrics.backgroundClutter) * 18 +
+      lightScore * 0.18 +
+      compositionScore * 0.18;
+  const expressionScore = clamp(round(expressionBase), 18, 98);
+
+  const technicalScore = clamp(round(
+    normalize(metrics.meanEdge, 8, 46) * 24 +
+    normalize(metrics.dominantEdge, 18, 96) * 16 +
+    normalize(metrics.sharpnessRaw, 6, 30) * 24 +
+    (1 - normalize(metrics.noiseEstimate, 3, 18)) * 14 +
+    tonalSafety * 10 +
+    normalize(metrics.contrast, 0.18, 0.62) * 12
+  ), 18, 98);
+
+  const visualWeightScore = clamp(round(
+    normalize(metrics.subjectConcentration, 0.03, 0.15) * 26 +
+    (1 - normalize(peripheralRatio, 0.42, 0.92)) * 18 +
+    subjectCenterSupport * 20 +
+    symmetrySupport * 12 +
+    (1 - metrics.backgroundClutter) * 12 +
+    (genre === 'portrait' ? faceSupport * 12 : normalize(metrics.entropy, 5.1, 7.3) * 12)
+  ), 20, 98);
+
+  const weightedBase100 = round(
+    compositionScore * weights.compositionScore +
+    lightScore * weights.lightScore +
+    colorScore * weights.colorScore +
+    expressionScore * weights.expressionScore +
+    technicalScore * weights.technicalScore +
+    visualWeightScore * weights.visualWeightScore,
     1
   );
 
-  const compositionScore = clamp(round(
-    metrics.leftRightBalance * 23 +
-    metrics.topBottomBalance * 18 +
-    metrics.thirdsAlignment * 28 +
-    normalize(metrics.subjectConcentration, 0.035, 0.14) * 17 +
-    (sceneType === 'portrait'
-      ? metrics.faceMetrics.faceCenteredness * 14
-      : subjectCenterSupport * 14)
-  ), 18, 97);
+  const genericity = metrics.thirdsAlignment * 0.34 + symmetrySupport * 0.24 + subjectCenterSupport * 0.22 + (1 - normalize(metrics.entropy, 5.2, 7.4)) * 0.2;
+  const uniquenessSupport = normalize(metrics.brightnessStd, 28, 78) * 0.25 + normalize(metrics.entropy, 5.2, 7.4) * 0.25 + expressionScore / 100 * 0.25 + visualWeightScore / 100 * 0.25;
+  const originalityPenalty = clamp(round(5 + genericity * 11 - uniquenessSupport * 5), 5, 15);
+  const finishBonus = clamp(round(
+    5 +
+    tonalSafety * 6 +
+    normalize(lightScore, 62, 92) * 4 +
+    normalize(technicalScore, 60, 92) * 3 +
+    normalize(expressionScore, 65, 95) * 2
+  ), 5, 20);
 
-  if (sceneType === 'portrait') {
-    const backgroundScore = clamp(round(
-      (1 - metrics.backgroundInformation) * 34 +
-      (1 - metrics.backgroundClutter) * 38 +
-      normalize(metrics.subjectConcentration, 0.03, 0.14) * 18 +
-      (1 - normalize(metrics.edgeBands.peripheral / Math.max(1, metrics.edgeBands.total), 0.45, 0.9)) * 10
-    ), 18, 96);
-
-    const cleanlinessScore = clamp(round(
-      (1 - normalize(metrics.noiseEstimate, 2, 18)) * 30 +
-      brightnessScore * 0.26 +
-      backgroundScore * 0.24 +
-      (1 - metrics.backgroundClutter) * 20
-    ), 18, 96);
-
-    const expressionScore = clamp(round(
-      normalize(metrics.faceMetrics.faceAreaRatio, 0.03, 0.18) * 36 +
-      metrics.faceMetrics.faceCenteredness * 24 +
-      metrics.faceMetrics.faceStability * 18 +
-      normalize(focusScore, 45, 95) * 12 +
-      normalize(brightnessScore, 45, 95) * 10
-    ), 28, 95);
-
-    const impressionScore = clamp(round(
-      compositionScore * 0.21 +
-      brightnessScore * 0.16 +
-      focusScore * 0.17 +
-      expressionScore * 0.15 +
-      backgroundScore * 0.14 +
-      cleanlinessScore * 0.17
-    ), 18, 98);
-
-    const totalScore = clamp(round(
-      compositionScore * 0.16 +
-      brightnessScore * 0.15 +
-      focusScore * 0.17 +
-      expressionScore * 0.13 +
-      backgroundScore * 0.13 +
-      cleanlinessScore * 0.11 +
-      impressionScore * 0.15
-    ), 16, 98);
-
-    return {
-      sceneType,
-      compositionScore,
-      brightnessScore,
-      focusScore,
-      expressionScore,
-      backgroundScore,
-      cleanlinessScore,
-      impressionScore,
-      totalScore,
-    };
-  }
-
-  const colorScore = clamp(round(
-    scoreFromDeviation(metrics.saturationRatio, 0.18, 0.08, 0.2) * 0.34 +
-    scoreFromDeviation(metrics.contrast, 0.42, 0.14, 0.38) * 0.28 +
-    (1 - clamp(metrics.overexposedRatio / 0.11, 0, 1)) * 18 +
-    (1 - clamp(metrics.underexposedRatio / 0.14, 0, 1)) * 20
-  ), 18, 97);
-
-  const organizationScore = clamp(round(
-    (1 - metrics.backgroundClutter) * 40 +
-    (1 - normalize(metrics.edgeBands.peripheral / Math.max(1, metrics.edgeBands.total), 0.45, 0.9)) * 20 +
-    metrics.leftRightBalance * 16 +
-    metrics.topBottomBalance * 10 +
-    normalize(metrics.subjectConcentration, 0.03, 0.13) * 14
-  ), 18, 97);
-
-  const informationScore = clamp(round(
-    scoreFromDeviation(metrics.backgroundInformation, 0.46, 0.17, 0.42) * 0.48 +
-    scoreFromDeviation(metrics.entropy, 6.1, 0.9, 2.2) * 0.32 +
-    normalize(metrics.subjectConcentration, 0.03, 0.12) * 20
-  ), 18, 97);
-
-  const impressionScore = clamp(round(
-    compositionScore * 0.2 +
-    brightnessScore * 0.16 +
-    focusScore * 0.18 +
-    colorScore * 0.14 +
-    organizationScore * 0.16 +
-    informationScore * 0.16
-  ), 18, 98);
-
-  const totalScore = clamp(round(
-    compositionScore * 0.18 +
-    brightnessScore * 0.16 +
-    focusScore * 0.18 +
-    colorScore * 0.14 +
-    organizationScore * 0.13 +
-    informationScore * 0.08 +
-    impressionScore * 0.13
-  ), 16, 98);
+  const raw120 = round(weightedBase100 * 1.2, 1);
+  const adjustedScore = clamp(round(raw120 - originalityPenalty + finishBonus, 1), 0, 120);
+  const total120 = clamp(round(adjustedScore), 0, 120);
+  const totalScore = clamp(round(adjustedScore / 1.2), 0, 100);
+  const baseline = getRelativeGenreBaseline(genre);
+  const genreDelta = round(totalScore - baseline.average100, 1);
+  const passEstimate = clamp(round(baseline.passBase - genreDelta * 0.7 * (REVIEW_PHILOSOPHY_CONFIG[reviewPhilosophy]?.passScale || 1)), 3, 85);
+  const rank = totalScore >= 88 ? 'A+' : totalScore >= 80 ? 'A' : totalScore >= 72 ? 'B' : totalScore >= 64 ? 'C' : 'D';
 
   return {
+    reviewPhilosophy,
+    reviewPhilosophyLabel: REVIEW_PHILOSOPHY_LABELS[reviewPhilosophy] || REVIEW_PHILOSOPHY_LABELS.international,
+    genre,
+    genreLabel: GENRE_LABELS[genre] || GENRE_LABELS.other,
     sceneType,
+    weights,
     compositionScore,
-    brightnessScore,
-    focusScore,
+    lightScore,
     colorScore,
-    organizationScore,
-    informationScore,
-    impressionScore,
+    expressionScore,
+    technicalScore,
+    visualWeightScore,
+    originalityPenalty,
+    finishBonus,
+    raw120,
+    adjustedScore,
+    total120,
     totalScore,
+    convertedScore: totalScore,
+    genreDelta,
+    passEstimate,
+    rank,
+    philosophyReason: buildContestReason(reviewPhilosophy, genre, metrics, {
+      lightScore,
+      expressionScore,
+      visualWeightScore,
+      technicalScore,
+    }),
   };
 }
 
-function buildImprovementSignals(metrics, scores) {
-  const sceneType = scores.sceneType || detectSceneType(metrics);
+function buildContestImprovementSignals(metrics, scores, genre) {
   const signals = [];
-  if (metrics.overexposedRatio > 0.08) signals.push('白飛びが目立ちます');
-  if (metrics.underexposedRatio > 0.12) signals.push('黒つぶれが多めです');
-  if (metrics.noiseEstimate > 10.5) signals.push('高ISO由来のノイズ感があります');
-  if (metrics.backgroundClutter > 0.58) signals.push(sceneType === 'portrait' ? '背景が過密です' : '背景整理が不足しています');
-  if (scores.focusScore < 60) signals.push('ピント不足です');
-  if (metrics.thirdsAlignment < 0.35) signals.push('主題配置が三分割構図から外れています');
-  if (sceneType === 'nonPortrait' && scores.colorScore < 60) signals.push('色再現が安定していません');
-  if (sceneType === 'nonPortrait' && scores.informationScore < 60) signals.push('情報量の整理が必要です');
-  if (sceneType === 'portrait' && !metrics.faceDetectionSupported) signals.push('FaceDetector非対応環境です');
+  if (metrics.overexposedRatio > 0.08) signals.push('白飛びが強く、階調保持が弱い');
+  if (metrics.underexposedRatio > 0.12) signals.push('黒つぶれが多く、暗部情報が不足');
+  if (metrics.noiseEstimate > 10.5) signals.push('高ISOノイズがディテールを圧迫');
+  if (metrics.thirdsAlignment > 0.72 && scores.originalityPenalty >= 10) signals.push('定番構図寄りで独創性減点が大きい');
+  if (genre !== 'portrait' && metrics.backgroundClutter > 0.58) signals.push('背景整理不足で視線誘導が分散');
+  if (genre === 'portrait' && scores.expressionScore < 65) signals.push('人物の存在感が弱く物語性が浅い');
+  if (scores.visualWeightScore < 65) signals.push('画面内で主題の勝ち方が弱い');
   return signals;
 }
 
-function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
-  const sceneType = scores.sceneType || detectSceneType(metrics);
-  const activeItems = SCORE_ITEMS_BY_MODE[sceneType] || SCORE_ITEMS_BY_MODE.portrait;
-  const activeKeys = activeItems.map(item => item.key);
-  const ranked = Object.entries(scores)
-    .filter(([key]) => activeKeys.includes(key))
-    .sort((a, b) => b[1] - a[1]);
-  const bestKey = ranked[0][0];
-  const worstKey = ranked[ranked.length - 1][0];
-  const seed = Math.round(metrics.brightnessMean + metrics.sharpnessRaw * 9 + metrics.entropy * 7);
-  const strengthsComment = pick(ITEM_COMMENT_MAP[bestKey][getTier(scores[bestKey])], seed + 3);
+function buildMetricReasons(scores, metrics, genre) {
+  return {
+    compositionScore: `三分割整合 ${round(metrics.thirdsAlignment, 2)}、左右バランス ${round(metrics.leftRightBalance, 2)}、主題集中 ${round(metrics.subjectConcentration, 3)} を反映`,
+    lightScore: `平均輝度 ${round(metrics.brightnessMean)}、白飛び ${round(metrics.overexposedRatio * 100, 1)}%、黒つぶれ ${round(metrics.underexposedRatio * 100, 1)}%、コントラスト ${round(metrics.contrast, 2)} を評価`,
+    colorScore: `彩度比 ${round(metrics.saturationRatio, 2)}、階調情報量 ${round(metrics.entropy, 2)}、色の破綻の少なさを評価`,
+    expressionScore: genre === 'portrait'
+      ? `顔面積比 ${round(metrics.faceMetrics.faceAreaRatio * 100, 1)}%、主題集中、視線停止力から人物の伝達力を推定`
+      : `主題集中、情報量、背景整理、画面の緊張感から物語性を推定`,
+    technicalScore: `シャープネス ${round(metrics.sharpnessRaw, 1)}、エッジ量 ${round(metrics.meanEdge, 1)}、ノイズ ${round(metrics.noiseEstimate, 1)} を評価`,
+    visualWeightScore: `主題の密度、周辺エッジ比 ${round(metrics.edgeBands.peripheral / Math.max(1, metrics.edgeBands.total), 2)}、視線誘導の強さを評価`,
+  };
+}
 
-  const concreteIssues = [];
-  if (metrics.overexposedRatio > 0.08) concreteIssues.push(`白飛び率${round(metrics.overexposedRatio * 100)}%が出ています`);
-  if (metrics.underexposedRatio > 0.12) concreteIssues.push(`黒つぶれ率${round(metrics.underexposedRatio * 100)}%が高めです`);
-  if (metrics.backgroundClutter > 0.58) concreteIssues.push(sceneType === 'portrait' ? '背景の散らかりが主題を弱めています' : '背景の散らかりが画面整理を崩しています');
-  if (scores.focusScore < 60) concreteIssues.push(`シャープネス指標${round(metrics.sharpnessRaw, 1)}で輪郭が弱めです`);
-  if (metrics.noiseEstimate > 10.5) concreteIssues.push(`ノイズ推定値${round(metrics.noiseEstimate, 1)}でざらつきがあります`);
-  if (sceneType === 'nonPortrait' && scores.colorScore < 60) concreteIssues.push(`彩度比${round(metrics.saturationRatio, 2)}とコントラスト${round(metrics.contrast, 2)}のバランスが弱めです`);
-  if (sceneType === 'nonPortrait' && scores.informationScore < 60) concreteIssues.push(`背景情報量${round(metrics.backgroundInformation, 2)}が適正域から外れています`);
-  if (sceneType === 'portrait' && scores.expressionScore < 60) concreteIssues.push(`顔面積比${round(metrics.faceMetrics.faceAreaRatio * 100, 1)}%で人物主題の訴求が弱めです`);
+function pickContestReferences(reviewPhilosophy, genre) {
+  return (CONTEST_REFERENCE_LIBRARY[reviewPhilosophy] || [])
+    .filter(item => item.tags.includes(genre))
+    .slice(0, 5);
+}
 
-  const weakestBase = pick(ITEM_COMMENT_MAP[worstKey][getTier(scores[worstKey])], seed + 11);
-  const improvementComment = [
-    weakestBase,
-    concreteIssues.slice(0, 2).join('。'),
-    improvementSignals.slice(0, 2).length ? `主な課題は ${improvementSignals.slice(0, 2).join('・')} です。` : '',
-  ].filter(Boolean).join(' ');
+function generateContestCommentary(scores, metrics, genre, reviewPhilosophy) {
+  const metricReasons = buildMetricReasons(scores, metrics, genre);
+  const strengths = [];
+  const improvements = {};
+  const ranked = [...CONTEST_SCORE_ITEMS].sort((a, b) => scores[b.key] - scores[a.key]);
+  const weakest = [...CONTEST_SCORE_ITEMS].sort((a, b) => scores[a.key] - scores[b.key]);
+  const strongKeys = ranked.slice(0, 4);
+  const weakKeys = weakest.slice(0, 3);
+  const improvementSignals = buildContestImprovementSignals(metrics, scores, genre);
 
-  let overallComment = `総合${scores.totalScore}点。`;
-  if (scores.totalScore >= 85) {
-    overallComment += sceneType === 'portrait'
-      ? '露出・構図・主題性のバランスが良く、完成度の高い人物写真です。'
-      : '構図・色・情報整理のバランスが良く、完成度の高い写真です。';
-  } else if (scores.totalScore >= 70) {
-    overallComment += sceneType === 'portrait'
-      ? '全体水準は良好ですが、人物訴求の弱い項目を整えるとさらに伸びます。'
-      : '全体水準は良好ですが、色と情報整理を詰めるとさらに見栄えが上がります。';
-  } else if (scores.totalScore >= 50) {
-    overallComment += sceneType === 'portrait'
-      ? '基本は成立していますが、露出や背景整理に改善余地があります。'
-      : '基本は成立していますが、構図や情報量の整理に改善余地があります。';
-  } else {
-    overallComment += sceneType === 'portrait'
-      ? '人物写真としての訴求が弱いため、主題の見せ方から再設計した方が早い状態です。'
-      : '技術的な不足が目立つため、構図と整理感を意識した再撮影が有効です。';
-  }
-  overallComment += ` 平均輝度${round(metrics.brightnessMean)}、コントラスト${round(metrics.contrast, 2)}、背景散らかり度${round(metrics.backgroundClutter, 2)}。`;
-  if (sceneType === 'portrait') {
-    overallComment += ` 顔検出${metrics.faceMetrics.faceCount}件、顔面積比${round(metrics.faceMetrics.faceAreaRatio * 100, 1)}%。`;
-  } else {
-    overallComment += ` 色再現${scores.colorScore}点、情報量${scores.informationScore}点です。`;
-  }
+  strongKeys.forEach(item => {
+    if (item.key === 'compositionScore') strengths.push(scores.originalityPenalty >= 10 ? '構図自体は安定しており、定番性と完成度の境界を攻めています。' : '構図の骨格が安定し、主題配置に緊張感があります。');
+    if (item.key === 'lightScore') strengths.push('光の当たり方と階調の残り方に無理が少なく、露出判断が良好です。');
+    if (item.key === 'colorScore') strengths.push('色の破綻が少なく、鑑賞時にノイズよりも色面が先に伝わります。');
+    if (item.key === 'expressionScore') strengths.push(genre === 'portrait' ? '人物の存在感や感情の読み取りが成立し、視線が止まりやすいです。' : '主題の意味や物語の読みが発生しやすく、単なる記録に留まりません。');
+    if (item.key === 'technicalScore') strengths.push('ピント・ノイズ・露出精度の基礎体力が高く、審査で減点されにくい状態です。');
+    if (item.key === 'visualWeightScore') strengths.push('サムネイルでも主題が勝ちやすく、視線誘導が明快です。');
+  });
 
-  return { strengthsComment, improvementComment, overallComment };
+  CONTEST_SCORE_ITEMS.forEach(item => {
+    if (item.key === 'compositionScore') improvements.compositionScore = scores.compositionScore < 68
+      ? '主題を少しずらす、余白を切る、または高さを変えて、既視感の少ない主題配置へ再設計すると有効です。'
+      : '安定はしています。次は定番の三分割から一段外し、画面内の緊張感を増やす試行が効きます。';
+    if (item.key === 'lightScore') improvements.lightScore = scores.lightScore < 68
+      ? 'ハイライト優先か暗部優先かを先に決め、ヒストグラムの端張りを減らす方向で露出を詰めてください。'
+      : '光は悪くありません。時間帯や被写体角度を変え、光に固有性が出る瞬間を狙うと伸びます。';
+    if (item.key === 'colorScore') improvements.colorScore = scores.colorScore < 68
+      ? '色相の足し算を減らし、主役色を一つ立てる方向で整理すると審査時の読みが速くなります。'
+      : '色の安定感はあります。次は色数を絞るか、補色の緊張感を明確にする方向が有効です。';
+    if (item.key === 'expressionScore') improvements.expressionScore = scores.expressionScore < 68
+      ? (genre === 'portrait' ? '距離・視線・背景との関係を組み替え、感情の読み取りが起こる瞬間を待つと改善しやすいです。' : '主題の意味が立つ位置関係を探し、なぜこの瞬間なのかが伝わる要素を足してください。')
+      : '表現意図は伝わっています。次は見る側が一段深く解釈できる余白を残す構成が有効です。';
+    if (item.key === 'technicalScore') improvements.technicalScore = scores.technicalScore < 68
+      ? 'シャッター速度、ピント面、ISOの優先順位を整理し、まず破綻しない撮り方へ戻すのが近道です。'
+      : '技術基盤はあります。次は意図的な甘さやブレを「失敗でなく演出」として成立させる挑戦ができます。';
+    if (item.key === 'visualWeightScore') improvements.visualWeightScore = scores.visualWeightScore < 68
+      ? '主題の占有率か周辺整理のどちらかを強め、縮小表示でも目が迷わない画面に整えてください。'
+      : '視線誘導は十分です。次は大胆なトリミングや前景処理で、より強い引力を狙えます。';
+  });
+
+  const overallComment = `${scores.reviewPhilosophyLabel}・${scores.genreLabel}として換算 ${scores.totalScore} 点。平均との差 ${scores.genreDelta >= 0 ? '+' : ''}${scores.genreDelta} 点で、一次審査は上位 ${scores.passEstimate}% 相当の想定です。`;
+  const developmentAdvice = [
+    'Lightroomでは、ヒストグラム両端の張り付きと中間調の密度を見ながら、白レベルと黒レベルを先に決めてから全体トーンを追い込む。',
+    metrics.overexposedRatio > 0.08 ? 'ハイライト側の粘りが弱いので、露光量よりハイライト・白レベルを先に下げて階調保持を優先する。' : 'ハイライトは持っています。白レベルを上げる場合も色域の飽和とトーンジャンプが出ない範囲で止める。',
+    metrics.underexposedRatio > 0.12 ? '暗部を持ち上げる場合は黒浮きよりも階調接続を優先し、シャドウと黒レベルを同時に上げすぎない。' : '暗部は比較的安定しています。黒を締めるときは影の情報が潰れない位置で止める。',
+    scores.colorScore < 68 ? '色は全体を一括で強めず、主役色だけを選択的に立てて色域破綻を避ける。' : '彩度よりも自然な色相分離を優先し、被写体と背景の色の距離を保つ。',
+  ];
+
+  const contestReferences = pickContestReferences(reviewPhilosophy, genre);
+
+  return {
+    metricReasons,
+    strengths: [...new Set(strengths)].slice(0, 5),
+    improvements,
+    improvementSignals,
+    developmentAdvice,
+    overallComment,
+    nextDirection: REVIEW_PHILOSOPHY_CONFIG[reviewPhilosophy]?.nextDirection || REVIEW_PHILOSOPHY_CONFIG.international.nextDirection,
+    contestReferences,
+    strengthsComment: [...new Set(strengths)].slice(0, 3).join(' '),
+    improvementComment: weakKeys.map(item => `${item.label}: ${improvements[item.key]}`).join(' '),
+  };
 }
 
 async function analyzeImageFile(file, preferredSource = '') {
@@ -1750,11 +1909,12 @@ async function analyzeImageFile(file, preferredSource = '') {
     faceDetectionSupported: faceDetection.supported,
   };
 
-  const scores = deriveScoresFromMetrics(metrics);
-  const improvementSignals = buildImprovementSignals(metrics, scores);
-  const comments = generateCommentsFromAnalysis(scores, metrics, improvementSignals);
+  const reviewPhilosophy = getSelectedReviewPhilosophy();
+  const genre = getSelectedGenre();
+  const scores = deriveContestScores(metrics, reviewPhilosophy, genre);
+  const comments = generateContestCommentary(scores, metrics, genre, reviewPhilosophy);
 
-  return { scores, metrics, improvementSignals, comments };
+  return { scores, metrics, improvementSignals: comments.improvementSignals, comments };
 }
 
 function buildDeliveryPayload(record, imageBase64, settings) {
@@ -1768,18 +1928,36 @@ function buildDeliveryPayload(record, imageBase64, settings) {
     imageContentType: 'image/jpeg',
     evaluation: {
       compositionScore: record.compositionScore,
-      brightnessScore: record.brightnessScore,
-      focusScore: record.focusScore,
+      brightnessScore: record.lightScore,
+      focusScore: record.technicalScore,
       expressionScore: record.expressionScore,
-      backgroundScore: record.backgroundScore,
-      cleanlinessScore: record.cleanlinessScore,
-      impressionScore: record.impressionScore,
+      backgroundScore: record.visualWeightScore,
+      cleanlinessScore: record.finishBonus,
+      impressionScore: record.adjustedScore,
       totalScore: record.totalScore,
       strengthsComment: record.strengthsComment,
       improvementComment: record.improvementComment,
       overallComment: record.overallComment,
       analysisMeta: record.analysisMeta,
       improvementSignals: record.improvementSignals || [],
+      contestEvaluation: {
+        reviewPhilosophy: record.reviewPhilosophy,
+        reviewPhilosophyLabel: record.reviewPhilosophyLabel,
+        genre: record.genre,
+        genreLabel: record.genreLabel,
+        lightScore: record.lightScore,
+        colorScore: record.colorScore,
+        technicalScore: record.technicalScore,
+        visualWeightScore: record.visualWeightScore,
+        originalityPenalty: record.originalityPenalty,
+        finishBonus: record.finishBonus,
+        adjustedScore: record.adjustedScore,
+        total120: record.total120,
+        convertedScore: record.convertedScore,
+        genreDelta: record.genreDelta,
+        passEstimate: record.passEstimate,
+        rank: record.rank,
+      },
     },
   };
 }
@@ -1860,6 +2038,10 @@ async function sendRecordToWebhook(record) {
 function buildAnalysisMeta(metrics, scores) {
   return {
     sceneType: scores.sceneType,
+    reviewPhilosophy: scores.reviewPhilosophy,
+    reviewPhilosophyLabel: scores.reviewPhilosophyLabel,
+    genre: scores.genre,
+    genreLabel: scores.genreLabel,
     brightnessMean: round(metrics.brightnessMean),
     brightnessVariance: round(metrics.brightnessVariance, 1),
     whiteClipRatio: round(metrics.overexposedRatio * 100, 1),
@@ -1879,6 +2061,10 @@ function buildAnalysisMeta(metrics, scores) {
     faceAreaRatio: round(metrics.faceMetrics.faceAreaRatio * 100, 1),
     faceCenteredness: round(metrics.faceMetrics.faceCenteredness, 2),
     faceDetectionSupported: metrics.faceDetectionSupported,
+    originalityPenalty: scores.originalityPenalty,
+    finishBonus: scores.finishBonus,
+    adjustedScore: scores.adjustedScore,
+    total120: scores.total120,
     totalScore: scores.totalScore,
   };
 }
@@ -1899,10 +2085,10 @@ async function runEvaluation() {
   hideError();
 
   const loadingLabels = [
-    '平均輝度・白飛び・黒つぶれを解析中...',
-    'エッジ量・シャープネス・ノイズを推定中...',
-    '構図・主題集中度・背景散らかり度を計算中...',
-    'コメントと送信データを組み立てています...',
+    '階調・白飛び・黒つぶれを解析中...',
+    '構図・主題集中度・ビジュアルウエイトを推定中...',
+    '審査思想とジャンル別の相対スコアを算出中...',
+    '帰納的コメントと送信データを組み立てています...',
   ];
   let index = 0;
   loadingLabel.textContent = loadingLabels[0];
@@ -1922,6 +2108,12 @@ async function runEvaluation() {
       ...analysis.scores,
       ...analysis.comments,
       improvementSignals: analysis.improvementSignals,
+      metricReasons: analysis.comments.metricReasons,
+      strengthsList: analysis.comments.strengths,
+      improvementByItem: analysis.comments.improvements,
+      developmentAdvice: analysis.comments.developmentAdvice,
+      nextDirection: analysis.comments.nextDirection,
+      contestReferences: analysis.comments.contestReferences,
       analysisMeta: buildAnalysisMeta(analysis.metrics, analysis.scores),
       delivery: {
         status: 'pending',
@@ -1961,17 +2153,41 @@ function renderScoreBars(scope = document) {
   });
 }
 
+function renderBulletList(items) {
+  return `<ul class="bullet-list">${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+}
+
+function renderMetricRows(record) {
+  return CONTEST_SCORE_ITEMS.map(item => `
+    <div class="metric-row">
+      <span class="metric-name">・${item.label}</span>
+      <span class="metric-score">${escapeHtml(String(record[item.key] ?? '—'))}点</span>
+      <span class="metric-reason">（根拠：${escapeHtml(record.metricReasons?.[item.key] || '')}）</span>
+    </div>
+  `).join('');
+}
+
+function renderReferenceList(items) {
+  return `
+    <div class="reference-list">
+      ${items.map(item => `
+        <div>
+          <div class="summary-line">${escapeHtml(item.name)}</div>
+          <a class="reference-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.url)}</a>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function buildMetaLine(record) {
-  const meta = record.analysisMeta || {};
   return [
-    `判定モード ${SCENE_TYPE_LABELS[record.sceneType || meta.sceneType || 'portrait'] || SCENE_TYPE_LABELS.portrait}`,
-    Number.isFinite(meta.brightnessMean) ? `平均輝度 ${meta.brightnessMean}` : '',
-    Number.isFinite(meta.whiteClipRatio) ? `白飛び ${meta.whiteClipRatio}%` : '',
-    Number.isFinite(meta.blackClipRatio) ? `黒つぶれ ${meta.blackClipRatio}%` : '',
-    Number.isFinite(meta.sharpnessRaw) ? `シャープネス ${meta.sharpnessRaw}` : '',
-    Number.isFinite(meta.noiseEstimate) ? `ノイズ ${meta.noiseEstimate}` : '',
-    meta.faceDetectionSupported ? (meta.faceDetected ? `顔検出 ${meta.faceCount}件` : '顔検出 0件') : 'FaceDetector 非対応',
-  ].filter(Boolean).join(' ／ ');
+    `審査思想 ${record.reviewPhilosophyLabel || '未設定'}`,
+    `ジャンル ${record.genreLabel || '未設定'}`,
+    Number.isFinite(record.genreDelta) ? `平均との差 ${record.genreDelta >= 0 ? '+' : ''}${record.genreDelta}` : '',
+    Number.isFinite(record.passEstimate) ? `一次審査想定 上位${record.passEstimate}%` : '',
+    `評価ランク ${record.rank || '-'}`,
+  ].join(' ／ ');
 }
 
 function buildDeliveryHtml(record) {
@@ -1981,14 +2197,11 @@ function buildDeliveryHtml(record) {
 
 function buildResultHTML(record) {
   const totalColor = getScoreColor(record.totalScore);
-  const sceneType = record.sceneType || record.analysisMeta?.sceneType || 'portrait';
-  const scoreItems = SCORE_ITEMS_BY_MODE[sceneType] || SCORE_ITEMS_BY_MODE.portrait;
   const badgeBackground = record.totalScore >= 85 ? 'var(--green-dim)'
     : record.totalScore >= 70 ? 'var(--blue-dim)'
       : record.totalScore >= 50 ? 'var(--amber-dim)'
         : 'var(--red-dim)';
-
-  const scoreCardsHtml = scoreItems.map(item => {
+  const scoreCardsHtml = CONTEST_SCORE_ITEMS.map(item => {
     const score = record[item.key];
     const color = getScoreColor(score);
     return `
@@ -2006,39 +2219,73 @@ function buildResultHTML(record) {
 
   return `
     <div class="total-card">
-      <p class="total-label">TOTAL SCORE</p>
+      <p class="total-label">INDUCTIVE CONTEST SCORE</p>
       <div>
         <span class="total-number ${totalColor.badge}" style="color:${totalColor.text}">${record.totalScore}</span>
         <span class="total-unit">/100</span>
       </div>
       <span class="total-badge" style="color:${totalColor.text};background:${badgeBackground}">${totalColor.label}</span>
-      <p style="margin-top:14px;font-size:0.82rem;color:var(--text);font-weight:700">判定モード: ${SCENE_TYPE_LABELS[sceneType] || SCENE_TYPE_LABELS.portrait}</p>
+      <p style="margin-top:14px;font-size:0.82rem;color:var(--text);font-weight:700">受賞傾向ベースの帰納的評価</p>
       <p style="margin-top:14px;font-size:0.74rem;color:var(--text-muted)">${escapeHtml(buildMetaLine(record))}</p>
+    </div>
+
+    <div class="comments-section">
+      <div class="section-card">
+        <p class="section-title">審査思想</p>
+        <p class="summary-line">【審査思想】：${escapeHtml(record.reviewPhilosophyLabel)}寄り（理由：${escapeHtml(record.philosophyReason)}）</p>
+      </div>
+      <div class="section-card">
+        <p class="section-title">ジャンル</p>
+        <p class="summary-line">【ジャンル】：${escapeHtml(record.genreLabel)}</p>
+      </div>
     </div>
 
     <div class="scores-grid">${scoreCardsHtml}</div>
 
     <div class="comments-section">
-      <div class="comment-card">
-        <span class="comment-icon">✅</span>
-        <div>
-          <p class="comment-label label-good">強み・良かった点</p>
-          <p class="comment-text">${escapeHtml(record.strengthsComment)}</p>
+      <div class="section-card">
+        <p class="section-title">総合スコア</p>
+        <div class="metric-list">${renderMetricRows(record)}</div>
+        <div class="mini-grid" style="margin-top:16px">
+          <div class="mini-item"><span class="mini-label">独創性減点</span><span class="mini-value">-${record.originalityPenalty}点</span></div>
+          <div class="mini-item"><span class="mini-label">完成度加点</span><span class="mini-value">+${record.finishBonus}点</span></div>
+          <div class="mini-item"><span class="mini-label">補正後スコア</span><span class="mini-value">${record.adjustedScore}点</span></div>
+          <div class="mini-item"><span class="mini-label">合計</span><span class="mini-value">${record.total120}点 / 120点</span></div>
+          <div class="mini-item"><span class="mini-label">換算スコア</span><span class="mini-value">${record.totalScore}点 / 100点</span></div>
+          <div class="mini-item"><span class="mini-label">同ジャンル平均との差</span><span class="mini-value">${record.genreDelta >= 0 ? '+' : ''}${record.genreDelta}点</span></div>
+          <div class="mini-item"><span class="mini-label">一次審査通過率想定</span><span class="mini-value">上位${record.passEstimate}%相当</span></div>
+          <div class="mini-item"><span class="mini-label">評価ランク</span><span class="mini-value">${escapeHtml(record.rank)}</span></div>
         </div>
       </div>
-      <div class="comment-card">
-        <span class="comment-icon">💡</span>
-        <div>
-          <p class="comment-label label-imp">改善のヒント</p>
-          <p class="comment-text">${escapeHtml(record.improvementComment)}</p>
-        </div>
+
+      <div class="section-card">
+        <p class="section-title">良い点</p>
+        ${renderBulletList(record.strengthsList || [])}
       </div>
-      <div class="comment-card">
-        <span class="comment-icon">📝</span>
-        <div>
-          <p class="comment-label label-all">総合コメント</p>
-          <p class="comment-text">${escapeHtml(record.overallComment)}</p>
-        </div>
+
+      <div class="section-card">
+        <p class="section-title">改善点（項目別アドバイス）</p>
+        ${renderBulletList(CONTEST_SCORE_ITEMS.map(item => `${item.label}：${record.improvementByItem?.[item.key] || ''}`))}
+      </div>
+
+      <div class="section-card">
+        <p class="section-title">改善点（現像時）</p>
+        ${renderBulletList(record.developmentAdvice || [])}
+      </div>
+
+      <div class="section-card">
+        <p class="section-title">次に挑戦すべき方向性</p>
+        <p class="comment-text">${escapeHtml(record.nextDirection || '')}</p>
+      </div>
+
+      <div class="section-card">
+        <p class="section-title">参考フォトコンテスト</p>
+        ${renderReferenceList(record.contestReferences || [])}
+      </div>
+
+      <div class="section-card">
+        <p class="section-title">総評</p>
+        <p class="comment-text">${escapeHtml(record.overallComment)}</p>
       </div>
     </div>
 
@@ -2170,8 +2417,9 @@ function buildHistoryCard(record, index) {
           <span class="history-score-big" style="color:${totalColor.text}">${record.totalScore}<span style="font-size:0.7em;color:var(--text-dim)">/100</span></span>
           <span class="history-date">${escapeHtml(formatDate(record.createdAt))}</span>
         </div>
+        <p class="history-comment">${escapeHtml(record.reviewPhilosophyLabel || REVIEW_PHILOSOPHY_LABELS.international)} / ${escapeHtml(record.genreLabel || GENRE_LABELS.other)}</p>
         <p class="history-comment">${escapeHtml(record.overallComment)}</p>
-        <p class="history-comment" style="margin-bottom:8px;color:var(--text-dim)">送信: ${escapeHtml(status.label)} / drive</p>
+        <p class="history-comment" style="margin-bottom:8px;color:var(--text-dim)">送信: ${escapeHtml(status.label)} / drive / ランク ${escapeHtml(record.rank || '-')}</p>
         <div class="history-card-footer">
           <button class="btn-detail" onclick="openModal(${record.id});event.stopPropagation()">詳細</button>
           <button class="btn-delete" onclick="deleteRecord(${record.id}, event)">削除</button>
