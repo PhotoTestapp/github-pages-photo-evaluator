@@ -999,6 +999,7 @@ const DELIVERY_MAX_SIDE = 1920;
 
 let currentFile = null;
 let currentFileUrl = '';
+let currentFileDataUrl = '';
 let latestResultRecord = null;
 let sendingRecordId = null;
 let modalRecordId = null;
@@ -1267,6 +1268,7 @@ async function setFile(file) {
   }
 
   currentFile = file;
+  currentFileDataUrl = '';
   latestResultRecord = null;
   revokeCurrentFileUrl();
   currentFileUrl = URL.createObjectURL(file);
@@ -1274,6 +1276,7 @@ async function setFile(file) {
 
   try {
     const dataUrl = await readFileAsDataURL(file);
+    currentFileDataUrl = dataUrl;
     document.getElementById('preview-img').src = dataUrl;
     document.getElementById('preview-name').textContent = file.name;
     document.getElementById('dropzone').style.display = 'none';
@@ -1290,6 +1293,7 @@ async function setFile(file) {
 
 function resetFile() {
   currentFile = null;
+  currentFileDataUrl = '';
   latestResultRecord = null;
   revokeCurrentFileUrl();
   document.getElementById('preview-img').src = '';
@@ -1703,8 +1707,8 @@ function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
   return { strengthsComment, improvementComment, overallComment };
 }
 
-async function analyzeImageFile(file) {
-  const image = await loadImageElement(file);
+async function analyzeImageFile(file, preferredSource = '') {
+  const image = await loadImageElement(preferredSource || file);
   const { ctx, width, height } = createCanvasFromImage(image, 768);
   const stats = extractImageStats(ctx, width, height);
   const spatial = analyzeSpatialFeatures(stats.gray, width, height, stats);
@@ -1900,8 +1904,8 @@ async function runEvaluation() {
   }, 620);
 
   try {
-    const analysis = await analyzeImageFile(currentFile);
-    const imageData = await readFileAsDataURL(currentFile);
+    const imageData = currentFileDataUrl || await readFileAsDataURL(currentFile);
+    const analysis = await analyzeImageFile(currentFile, imageData);
     const record = {
       id: Date.now(),
       fileName: currentFile.name,
