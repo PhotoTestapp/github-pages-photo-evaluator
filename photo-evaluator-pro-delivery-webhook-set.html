@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Photo Eval">
 <link rel="manifest" href="./manifest.webmanifest">
-<title>かんたん写真評価 | Photo Eval</title>
+<title>写真チェックアプリ | Photo Eval</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -1295,7 +1295,7 @@
   <div class="nav-inner">
     <div class="nav-logo">📸 <span>PHOTO</span>EVAL</div>
     <div class="nav-tabs">
-      <button class="tab-btn active" onclick="showPage('evaluate')">評価する</button>
+      <button class="tab-btn active" onclick="showPage('evaluate')">写真をみる</button>
       <button class="tab-btn" onclick="showPage('history')">履歴</button>
     </div>
   </div>
@@ -1304,9 +1304,9 @@
 <!-- 評価ページ -->
 <div id="page-evaluate" class="page active">
   <div class="container">
-    <h1 class="page-title">かんたん写真評価</h1>
-    <p class="page-sub">写真を選ぶだけで、構図・明るさ・ピントなどを見やすく判定します。評価後の画像は自動で Google Drive に保存されます。</p>
-    <p class="page-sub note">JPG・JPEG・PNG・WebP・HEIFに対応しています。HEIFはお使いのブラウザによってはプレビューや解析ができない場合があります。</p>
+    <h1 class="page-title">写真チェックアプリ</h1>
+    <p class="page-sub">写真を選ぶだけで、構図・明るさ・ピントなどを分かりやすくチェックできます。チェック後の画像は自動で Google Drive に保存されます。</p>
+    <p class="page-sub note">JPG・JPEG・PNG・WebP・HEIFに対応しています。HEIFはお使いのブラウザによっては表示や確認ができない場合があります。</p>
 
     <div id="launch-warning" class="launch-warning"></div>
 
@@ -1316,7 +1316,7 @@
       <div>
         <span class="mini-info-chip">はじめてでも迷いにくい3ステップ</span>
         <h2>このアプリでできること</h2>
-        <p>写真をアップロードすると、その場で見やすく点数化し、あとから履歴で見返せます。必要な設定や学習機能は裏側で動くので、まずは気軽に評価してみてください。</p>
+        <p>写真をアップロードすると、その場で分かりやすく点数化し、あとから履歴で見返せます。保存や精度改善の仕組みは裏側で動くので、まずは気軽に写真をチェックしてみてください。</p>
       </div>
       <div class="step-grid">
         <article class="step-card">
@@ -1326,19 +1326,19 @@
         </article>
         <article class="step-card">
           <span class="step-num">2</span>
-          <h3>評価する</h3>
-          <p>構図や明るさなどを自動で解析して、総合点と項目別の見やすい結果を表示します。</p>
+          <h3>チェックする</h3>
+          <p>構図や明るさなどを自動で確認して、総合点と項目ごとの見やすい結果を表示します。</p>
         </article>
         <article class="step-card">
           <span class="step-num">3</span>
           <h3>結果を見る</h3>
-          <p>結果は履歴にも残り、画像は自動保存されます。必要ならフィードバックで精度改善にも参加できます。</p>
+          <p>結果は履歴にも残り、画像は自動保存されます。必要なら感想を送って精度改善にも協力できます。</p>
         </article>
       </div>
       <div class="mini-info-row">
-        <span class="mini-info-chip">自動でDrive保存</span>
+        <span class="mini-info-chip">自動で保存</span>
         <span class="mini-info-chip">履歴からあとで確認</span>
-        <span class="mini-info-chip">フィードバックで精度アップ</span>
+        <span class="mini-info-chip">感想で精度改善に協力</span>
       </div>
     </section>
 
@@ -1346,7 +1346,7 @@
     <div id="dropzone" onclick="document.getElementById('file-input').click()">
       <input type="file" id="file-input" accept="image/jpeg,image/jpg,image/png,image/webp,image/heif,image/heic,.jpg,.jpeg,.png,.webp,.heif,.heic">
       <span class="drop-icon">📷</span>
-      <p class="drop-title">ここをタップして写真を選択</p>
+      <p class="drop-title">ここをタップして写真を選ぶ</p>
       <p class="drop-sub">ドラッグ＆ドロップにも対応しています ／ JPG・JPEG・PNG・WebP・HEIF ／ 最大25MB</p>
     </div>
 
@@ -1357,7 +1357,7 @@
         <span class="preview-name" id="preview-name">—</span>
         <div class="preview-actions">
           <a class="btn-secondary" id="download-current-photo" href="#" download>写真を保存</a>
-          <button class="preview-change" onclick="resetFile()">変更</button>
+          <button class="preview-change" onclick="resetFile()">選び直す</button>
         </div>
       </div>
     </div>
@@ -1366,13 +1366,13 @@
 
     <!-- 評価ボタン -->
     <button class="btn-primary" id="eval-btn" disabled onclick="runEvaluation()">
-      ✦ 写真を評価する
+      ✦ 写真をチェックする
     </button>
 
     <!-- ローディング -->
     <div id="loading">
       <div class="loader"></div>
-      <p class="loading-label" id="loading-label">画像を解析中...</p>
+      <p class="loading-label" id="loading-label">写真を確認しています...</p>
       <div class="loading-steps">
         <div class="loading-step"></div>
         <div class="loading-step"></div>
@@ -1383,10 +1383,10 @@
     <!-- 結果 -->
     <div id="result-section">
       <div class="result-header">
-        <p class="result-title">✦ 評価結果</p>
+        <p class="result-title">✦ チェック結果</p>
         <div class="result-actions">
           <a class="btn-secondary" id="download-result-photo" href="#" download>画像を保存</a>
-          <button class="btn-reset" onclick="resetAll()">新しく評価</button>
+          <button class="btn-reset" onclick="resetAll()">別の写真をみる</button>
         </div>
       </div>
       <div id="result-inner"></div>
@@ -1397,14 +1397,14 @@
 <!-- 履歴ページ -->
 <div id="page-history" class="page">
   <div class="container">
-    <h1 class="page-title">評価履歴</h1>
-    <p class="page-sub">これまでに評価した写真を、点数や日時とあわせて一覧で確認できます。</p>
+    <h1 class="page-title">チェック履歴</h1>
+    <p class="page-sub">これまでにチェックした写真を、点数や日時とあわせて一覧で確認できます。</p>
 
     <div class="history-toolbar">
       <span class="history-count" id="history-count">0件</span>
       <div class="history-actions">
-        <button class="btn-toolbar" onclick="exportLearningData('json')">学習JSON</button>
-        <button class="btn-toolbar" onclick="exportLearningData('csv')">学習CSV</button>
+        <button class="btn-toolbar" onclick="exportLearningData('json')">結果を書き出す(JSON)</button>
+        <button class="btn-toolbar" onclick="exportLearningData('csv')">結果を書き出す(CSV)</button>
         <button class="btn-clear-all" onclick="clearAllHistory()">すべて削除</button>
       </div>
     </div>
@@ -1412,7 +1412,7 @@
     <div id="history-grid"></div>
     <div id="history-empty">
       <div class="empty-icon">📭</div>
-      <p class="empty-text">まだ評価がありません<br>写真をアップロードして最初の評価をしましょう</p>
+      <p class="empty-text">まだチェック結果がありません<br>写真をアップロードして最初のチェックをしてみましょう</p>
     </div>
   </div>
 </div>
@@ -1421,7 +1421,7 @@
 <div id="modal-overlay" onclick="closeModal(event)">
   <div id="modal-box">
     <div class="modal-header">
-      <span class="modal-title" id="modal-title">評価詳細</span>
+      <span class="modal-title" id="modal-title">チェック結果の詳細</span>
       <div class="result-actions">
         <a class="btn-secondary" id="download-modal-photo" href="#" download>画像を保存</a>
         <button class="modal-close" onclick="closeModalDirect()">✕</button>
@@ -1541,7 +1541,7 @@ let mlRuntimeState = {
   available: false,
   sampleCount: 0,
   minimumMlSamples: 12,
-  reason: 'ML API未接続',
+  reason: 'AI補正は利用できません',
 };
 
 function clamp(value, min, max) {
@@ -1610,6 +1610,10 @@ function getScoreColor(score) {
   return { text: 'var(--red)', bar: 'bar-poor', badge: 'score-poor', label: '要改善' };
 }
 
+function getEvaluationModeLabel(mode) {
+  return mode === 'ML-assisted' ? 'AI補正あり' : '標準判定';
+}
+
 function getTier(score) {
   if (score >= 85) return 'high';
   if (score >= 60) return 'mid';
@@ -1653,7 +1657,7 @@ function writeDeliverySettings() {
     localStorage.setItem(STORAGE_KEYS.deliverySettings, JSON.stringify(settings));
   } catch (error) {
     console.warn('Failed to save delivery settings', error);
-    showError('送信設定の保存に失敗しました');
+    showError('保存設定の保存に失敗しました');
   }
 }
 
@@ -1673,8 +1677,8 @@ function collectDeliverySettings() {
 }
 
 function validateDeliverySettings(settings) {
-  if (!settings.webhookUrl) return 'Webhook URLを入力してください';
-  if (!/^https?:\/\//.test(settings.webhookUrl)) return 'Webhook URLの形式が正しくありません';
+  if (!settings.webhookUrl) return '保存先設定URLを入力してください';
+  if (!/^https?:\/\//.test(settings.webhookUrl)) return '保存先設定URLの形式が正しくありません';
   return '';
 }
 
@@ -1709,7 +1713,7 @@ async function apiRequest(path, options = {}) {
   });
 
   if (responseType === 'blob') {
-    if (!response.ok) throw new Error(`APIエラー: HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`連携エラー: HTTP ${response.status}`);
     return response.blob();
   }
 
@@ -1717,10 +1721,10 @@ async function apiRequest(path, options = {}) {
   try {
     data = await response.json();
   } catch {
-    throw new Error('APIレスポンスのJSON解析に失敗しました');
+    throw new Error('連携結果の読み取りに失敗しました');
   }
   if (!response.ok || data?.success === false) {
-    throw new Error(data?.message || `APIエラー: HTTP ${response.status}`);
+    throw new Error(data?.message || `連携エラー: HTTP ${response.status}`);
   }
   return data;
 }
@@ -1751,7 +1755,7 @@ async function refreshMlStatus() {
       available: false,
       sampleCount: 0,
       minimumMlSamples: 12,
-      reason: 'ML API未接続',
+      reason: 'AI補正は利用できません',
     });
   }
 }
@@ -1767,12 +1771,12 @@ function updateLaunchWarning() {
 
   if (isFile) {
     warningEl.classList.add('active');
-    warningEl.textContent = 'このHTMLは直接開かないでください。PCはローカル起動スクリプト、iPhoneはHTTPS公開URLから開いてください。';
+    warningEl.textContent = 'このページはファイルを直接開かず、公開URLまたは起動用の方法から使ってください。PCはローカル起動、iPhoneは公開URLから開くと安心です。';
     return;
   }
   if (!isLocalServer && !isHostedHttps) {
     warningEl.classList.add('active');
-    warningEl.textContent = 'このページはPCではローカルHTTPサーバー、iPhoneではHTTPS公開URLから開いてください。';
+    warningEl.textContent = 'このページは、PCではローカル起動、iPhoneでは公開URLから開いてください。公開URLは https ではじまるアドレスです。';
     return;
   }
   warningEl.classList.remove('active');
@@ -2591,19 +2595,19 @@ async function sendRecordToWebhook(record) {
     try {
       data = rawText ? JSON.parse(rawText) : null;
     } catch {
-      throw new Error(`Webhookレスポンスエラー: JSONではありません (${rawText.slice(0, 120)})`);
+      throw new Error(`保存先からの返答を読み取れませんでした (${rawText.slice(0, 120)})`);
     }
 
     if (!response.ok) {
-      throw new Error(data?.message ? `Webhookレスポンスエラー: ${data.message}` : `Webhookレスポンスエラー: HTTP ${response.status}`);
+      throw new Error(data?.message ? `保存先エラー: ${data.message}` : `保存先エラー: HTTP ${response.status}`);
     }
 
     const requiresDrive = true;
     if (!data?.success) {
-      throw new Error(data?.driveError ? `Webhookレスポンスエラー: ${data.driveError}` : `Webhookレスポンスエラー: ${data?.message || 'Webhook処理に失敗しました'}`);
+      throw new Error(data?.driveError ? `保存先エラー: ${data.driveError}` : `保存先エラー: ${data?.message || '保存処理に失敗しました'}`);
     }
     if (requiresDrive && !data.savedToDrive) {
-      throw new Error(data?.driveError ? `Webhookレスポンスエラー: ${data.driveError}` : `Webhookレスポンスエラー: ${data?.message || 'Google Drive保存に失敗しました'}`);
+      throw new Error(data?.driveError ? `保存先エラー: ${data.driveError}` : `保存先エラー: ${data?.message || 'Google Drive への保存に失敗しました'}`);
     }
 
     return {
@@ -2615,7 +2619,7 @@ async function sendRecordToWebhook(record) {
     };
   } catch (error) {
     if (error instanceof TypeError) {
-      throw new Error('ネットワークエラー: Webhookへ接続できません。起動スクリプト経由で開いているか、Webhook URLと公開設定を確認してください');
+      throw new Error('ネットワークエラー: 保存先へ接続できません。公開URLから開いているか、保存先設定と公開状態を確認してください');
     }
     throw error;
   }
@@ -2649,7 +2653,7 @@ function buildAnalysisMeta(metrics, scores) {
 
 async function runEvaluation() {
   if (!currentFile) {
-    showError('先に画像を選択してください');
+    showError('先に写真を選んでください');
     return;
   }
 
@@ -2663,10 +2667,10 @@ async function runEvaluation() {
   hideError();
 
   const loadingLabels = [
-    '平均輝度・白飛び・黒つぶれを解析中...',
-    'エッジ量・シャープネス・ノイズを推定中...',
-    '構図・主題集中度・背景散らかり度を計算中...',
-    'コメントと送信データを組み立てています...',
+    '明るさや白飛びを確認しています...',
+    'ピントや細かい写りを確認しています...',
+    '構図や背景のまとまりを確認しています...',
+    '結果と保存データをまとめています...',
   ];
   let index = 0;
   loadingLabel.textContent = loadingLabels[0];
@@ -2733,7 +2737,7 @@ async function runEvaluation() {
     }
   } catch (error) {
     console.error(error);
-    showError(error.message || '画像解析に失敗しました');
+    showError(error.message || '写真の確認に失敗しました');
   } finally {
     clearInterval(interval);
     loading.style.display = 'none';
@@ -2752,13 +2756,13 @@ function renderScoreBars(scope = document) {
 function buildMetaLine(record) {
   const meta = record.analysisMeta || {};
   return [
-    `判定モード ${SCENE_TYPE_LABELS[record.sceneType || meta.sceneType || 'portrait'] || SCENE_TYPE_LABELS.portrait}`,
+    `写真タイプ ${SCENE_TYPE_LABELS[record.sceneType || meta.sceneType || 'portrait'] || SCENE_TYPE_LABELS.portrait}`,
     Number.isFinite(meta.brightnessMean) ? `平均輝度 ${meta.brightnessMean}` : '',
     Number.isFinite(meta.whiteClipRatio) ? `白飛び ${meta.whiteClipRatio}%` : '',
     Number.isFinite(meta.blackClipRatio) ? `黒つぶれ ${meta.blackClipRatio}%` : '',
     Number.isFinite(meta.sharpnessRaw) ? `シャープネス ${meta.sharpnessRaw}` : '',
     Number.isFinite(meta.noiseEstimate) ? `ノイズ ${meta.noiseEstimate}` : '',
-    meta.faceDetectionSupported ? (meta.faceDetected ? `顔検出 ${meta.faceCount}件` : '顔検出 0件') : 'FaceDetector 非対応',
+    meta.faceDetectionSupported ? (meta.faceDetected ? `顔の検出 ${meta.faceCount}件` : '顔の検出 0件') : '顔検出はこの端末では利用できません',
   ].filter(Boolean).join(' ／ ');
 }
 
@@ -2770,6 +2774,7 @@ function buildDeliveryHtml(record) {
 function buildMlSummaryHtml(record) {
   const evaluationMode = record.evaluationMode || 'Rule-based';
   const usesMl = evaluationMode === 'ML-assisted';
+  const evaluationModeLabel = getEvaluationModeLabel(evaluationMode);
   const modelVersion = record.modelVersion || '未学習';
   const ruleScore = record.ruleBasedScores?.totalScore ?? record.totalScore;
   const scoreGap = Number.isFinite(record.scoreGap) ? record.scoreGap : 0;
@@ -2777,28 +2782,28 @@ function buildMlSummaryHtml(record) {
   return `
     <div class="ml-summary-card">
       <div class="section-head">
-        <p class="section-title">評価モード</p>
-        <span class="status-pill ${usesMl ? 'ml' : 'rule'}">${escapeHtml(evaluationMode)}</span>
+        <p class="section-title">結果の出し方</p>
+        <span class="status-pill ${usesMl ? 'ml' : 'rule'}">${escapeHtml(evaluationModeLabel)}</span>
       </div>
       <div class="ml-summary-grid">
         <div class="ml-summary-item">
-          <span class="summary-label">現在の評価方式</span>
-          <span class="summary-value">${escapeHtml(evaluationMode)}</span>
+          <span class="summary-label">現在のチェック方式</span>
+          <span class="summary-value">${escapeHtml(evaluationModeLabel)}</span>
         </div>
         <div class="ml-summary-item">
-          <span class="summary-label">モデルバージョン</span>
-          <span class="summary-value">${escapeHtml(modelVersion)}</span>
+          <span class="summary-label">調整データの版</span>
+          <span class="summary-value">${escapeHtml(modelVersion === '未学習' ? 'まだ調整前' : modelVersion)}</span>
         </div>
         <div class="ml-summary-item">
-          <span class="summary-label">ルールベース総合点</span>
+          <span class="summary-label">標準の総合点</span>
           <span class="summary-value">${escapeHtml(String(ruleScore))}</span>
         </div>
         <div class="ml-summary-item">
-          <span class="summary-label">モデル補正幅</span>
+          <span class="summary-label">自動調整</span>
           <span class="summary-value">${escapeHtml(`${scoreGap}点`)}</span>
         </div>
       </div>
-      <p class="feedback-note">モデル未学習またはAPI未接続時は自動で Rule-based にフォールバックします。コメント生成は当面ルールベースを維持しています。</p>
+      <p class="feedback-note">調整データがまだ少ない場合や接続できない場合は、自動で標準判定に戻ります。コメントは現在も標準のルールで作成しています。</p>
     </div>
   `;
 }
@@ -2808,12 +2813,12 @@ function buildFeedbackSectionHtml(record) {
   return `
     <div class="feedback-card">
       <div class="section-head">
-        <p class="section-title">フィードバック収集</p>
-        <span class="status-pill rule">使うほど学習用データが蓄積</span>
+        <p class="section-title">ご意見・感想</p>
+        <span class="status-pill rule">使うほど精度改善に役立ちます</span>
       </div>
       <div class="feedback-grid">
         <div class="feedback-field">
-          <label class="field-label" for="feedback-fairness">この評価は妥当ですか</label>
+          <label class="field-label" for="feedback-fairness">この結果はイメージに近いですか</label>
           <select id="feedback-fairness">
             <option value="">選択してください</option>
             <option value="valid" ${feedback.fairness === 'valid' ? 'selected' : ''}>妥当</option>
@@ -2822,7 +2827,7 @@ function buildFeedbackSectionHtml(record) {
           </select>
         </div>
         <div class="feedback-field">
-          <label class="field-label" for="feedback-comment-usefulness">コメントの参考度</label>
+          <label class="field-label" for="feedback-comment-usefulness">コメントは参考になりましたか</label>
           <select id="feedback-comment-usefulness">
             <option value="">選択してください</option>
             <option value="helpful" ${feedback.commentUsefulness === 'helpful' ? 'selected' : ''}>参考になった</option>
@@ -2830,11 +2835,11 @@ function buildFeedbackSectionHtml(record) {
           </select>
         </div>
         <div class="feedback-field">
-          <label class="field-label" for="feedback-corrected-score">手動補正点数</label>
+          <label class="field-label" for="feedback-corrected-score">あなたなら何点にしますか</label>
           <input id="feedback-corrected-score" type="number" min="0" max="100" step="1" value="${escapeHtml(feedback.correctedScore || '')}" placeholder="例: 78">
         </div>
         <div class="feedback-field">
-          <label class="field-label" for="feedback-genre">ジャンル</label>
+          <label class="field-label" for="feedback-genre">写真の種類</label>
           <select id="feedback-genre">
             <option value="">選択してください</option>
             <option value="portrait" ${feedback.genre === 'portrait' ? 'selected' : ''}>人物</option>
@@ -2846,23 +2851,23 @@ function buildFeedbackSectionHtml(record) {
           </select>
         </div>
         <div class="feedback-field">
-          <label class="field-label" for="feedback-review-mode">審査思想</label>
+          <label class="field-label" for="feedback-review-mode">見てほしい方向</label>
           <select id="feedback-review-mode">
-            <option value="sns" ${feedback.reviewMode === 'sns' ? 'selected' : ''}>SNS</option>
-            <option value="domestic" ${feedback.reviewMode === 'domestic' ? 'selected' : ''}>国内</option>
-            <option value="international" ${feedback.reviewMode === 'international' ? 'selected' : ''}>国際</option>
+            <option value="sns" ${feedback.reviewMode === 'sns' ? 'selected' : ''}>SNS向け</option>
+            <option value="domestic" ${feedback.reviewMode === 'domestic' ? 'selected' : ''}>国内向け</option>
+            <option value="international" ${feedback.reviewMode === 'international' ? 'selected' : ''}>国際向け</option>
           </select>
         </div>
         <div class="feedback-field full">
-          <label class="field-label" for="feedback-note">任意メモ</label>
-          <textarea id="feedback-note" placeholder="審査視点や補足メモを残せます">${escapeHtml(feedback.note || '')}</textarea>
+          <label class="field-label" for="feedback-note">ひとことメモ</label>
+          <textarea id="feedback-note" placeholder="気づいたことや補足があれば自由に書けます">${escapeHtml(feedback.note || '')}</textarea>
         </div>
       </div>
       <div class="feedback-actions">
-        <button class="btn-feedback" onclick="saveFeedbackForLatest()">フィードバックを保存</button>
+        <button class="btn-feedback" onclick="saveFeedbackForLatest()">感想を保存する</button>
         <span class="feedback-status" id="feedback-status">${escapeHtml(feedback.status || '')}</span>
       </div>
-      <p class="feedback-note">保存内容には画像特徴量、ルールベース評価、補正点、ジャンル、審査思想が含まれます。画像本体は学習データに含めません。</p>
+      <p class="feedback-note">保存されるのは点数や特徴量、補正点、写真の種類などです。画像そのものは精度改善用データに含まれません。</p>
     </div>
   `;
 }
@@ -2901,7 +2906,7 @@ function buildResultHTML(record, options = {}) {
         <span class="total-unit">/100</span>
       </div>
       <span class="total-badge" style="color:${totalColor.text};background:${badgeBackground}">${totalColor.label}</span>
-      <p style="margin-top:14px;font-size:0.82rem;color:var(--text);font-weight:700">判定モード: ${SCENE_TYPE_LABELS[sceneType] || SCENE_TYPE_LABELS.portrait}</p>
+      <p style="margin-top:14px;font-size:0.82rem;color:var(--text);font-weight:700">写真タイプ: ${SCENE_TYPE_LABELS[sceneType] || SCENE_TYPE_LABELS.portrait}</p>
       <p style="margin-top:14px;font-size:0.74rem;color:var(--text-muted)">${escapeHtml(buildMetaLine(record))}</p>
     </div>
 
@@ -2947,7 +2952,7 @@ function renderCurrentRecord(record) {
 
 function renderModalRecord(record) {
   modalRecordId = record.id;
-  document.getElementById('modal-title').textContent = `評価詳細 — ${formatDate(record.createdAt)}`;
+  document.getElementById('modal-title').textContent = `チェック結果の詳細 — ${formatDate(record.createdAt)}`;
   document.getElementById('modal-img').src = record.imageSrc;
   document.getElementById('modal-body').innerHTML = buildResultHTML(record);
   document.getElementById('modal-overlay').classList.add('active');
@@ -3013,7 +3018,7 @@ function buildLearningFeedbackPayload(record, feedback) {
 async function saveFeedbackToPublicCollector(payload) {
   const collectorUrl = getPublicFeedbackCollectorUrl();
   if (!collectorUrl) {
-    return { success: false, skipped: true, message: '公開収集先未設定' };
+    return { success: false, skipped: true, message: '公開用の保存先が未設定です' };
   }
 
   const response = await fetch(collectorUrl, {
@@ -3029,30 +3034,30 @@ async function saveFeedbackToPublicCollector(payload) {
   try {
     data = raw ? JSON.parse(raw) : {};
   } catch {
-    throw new Error(`公開収集レスポンスが不正です (${raw.slice(0, 120)})`);
+    throw new Error(`公開用の保存先からの返答を読み取れませんでした (${raw.slice(0, 120)})`);
   }
   if (!response.ok || data?.success === false) {
-    throw new Error(data?.message || `公開収集エラー: HTTP ${response.status}`);
+    throw new Error(data?.message || `公開用の保存先エラー: HTTP ${response.status}`);
   }
   return data;
 }
 
 async function saveFeedbackForLatest() {
   if (!latestResultRecord) {
-    showError('先に評価を実行してください');
+    showError('先に写真をチェックしてください');
     return;
   }
 
   const feedback = collectFeedbackFormValues();
   if (!feedback.fairness && !feedback.commentUsefulness && !feedback.correctedScore && !feedback.note && !feedback.genre) {
-    setFeedbackStatus('1項目以上入力してください', 'error');
+    setFeedbackStatus('どれか1つ以上入力してください', 'error');
     return;
   }
 
   if (feedback.correctedScore !== '') {
     const numeric = Number(feedback.correctedScore);
     if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) {
-      setFeedbackStatus('補正点数は0〜100で入力してください', 'error');
+      setFeedbackStatus('点数は0〜100で入力してください', 'error');
       return;
     }
   }
@@ -3083,7 +3088,7 @@ async function saveFeedbackForLatest() {
     }
 
     if (!localResponse && !publicResponse) {
-      throw lastError || new Error('フィードバック保存先へ接続できませんでした');
+      throw lastError || new Error('感想の保存先へ接続できませんでした');
     }
 
     const updatedRecord = {
@@ -3091,21 +3096,21 @@ async function saveFeedbackForLatest() {
       feedback: {
         ...feedback,
         savedAt: localResponse?.savedAt || publicResponse?.savedAt || new Date().toISOString(),
-        status: publicResponse && !localResponse ? '共有学習へ保存済み' : '保存済み',
+        status: publicResponse && !localResponse ? '精度改善用として保存済み' : '保存済み',
       },
     };
     await refreshRecordViews(updatedRecord);
     if (localResponse && publicResponse) {
-      setFeedbackStatus('ローカル学習DBと共有学習へ保存しました', 'success');
+      setFeedbackStatus('端末内と精度改善用の両方に保存しました', 'success');
     } else if (localResponse) {
-      setFeedbackStatus('ローカル学習DBへ保存しました', 'success');
+      setFeedbackStatus('この端末に保存しました', 'success');
     } else {
-      setFeedbackStatus('共有学習データとして保存しました', 'success');
+      setFeedbackStatus('精度改善用として保存しました', 'success');
     }
   } catch (error) {
     console.error(error);
     setFeedbackStatus(error.message || '保存に失敗しました', 'error');
-    showError(error.message || 'フィードバックの保存に失敗しました');
+    showError(error.message || '感想の保存に失敗しました');
   }
 }
 
@@ -3124,7 +3129,7 @@ async function exportLearningData(format) {
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error(error);
-    showError(error.message || '学習データのエクスポートに失敗しました');
+    showError(error.message || '結果の書き出しに失敗しました');
   }
 }
 
@@ -3205,7 +3210,7 @@ async function deleteFromHistory(id) {
 }
 
 async function clearAllHistory() {
-  if (!confirm('すべての評価履歴を削除しますか？')) return;
+  if (!confirm('履歴をすべて削除しますか？')) return;
   await runStoreOperation('readwrite', store => {
     store.clear();
   });
@@ -3235,7 +3240,7 @@ function buildHistoryCard(record, index) {
           <span class="history-date">${escapeHtml(formatDate(record.createdAt))}</span>
         </div>
         <p class="history-comment">${escapeHtml(record.overallComment)}</p>
-        <p class="history-comment" style="margin-bottom:8px;color:var(--text-dim)">送信: ${escapeHtml(status.label)} / drive</p>
+        <p class="history-comment" style="margin-bottom:8px;color:var(--text-dim)">保存状態: ${escapeHtml(status.label)} / Google Drive</p>
         <div class="history-card-footer">
           <button class="btn-detail" onclick="openModal(${record.id});event.stopPropagation()">詳細</button>
           <button class="btn-delete" onclick="deleteRecord(${record.id}, event)">削除</button>
@@ -3262,13 +3267,13 @@ async function renderHistory() {
     grid.innerHTML = history.map(buildHistoryCard).join('');
   } catch (error) {
     console.error(error);
-    showError('保存済み履歴の読み込みに失敗しました');
+    showError('履歴の読み込みに失敗しました');
   }
 }
 
 async function deleteRecord(id, event) {
   event.stopPropagation();
-  if (!confirm('この評価を削除しますか？')) return;
+  if (!confirm('この結果を削除しますか？')) return;
   await deleteFromHistory(id);
   if (latestResultRecord?.id === id) {
     latestResultRecord = null;
@@ -3330,7 +3335,7 @@ function buildDeliveryState(record, status, extra = {}) {
 async function sendRecordById(id) {
   const record = await getRecordById(id);
   if (!record) {
-    showError('送信対象の履歴が見つかりません');
+    showError('保存対象の履歴が見つかりません');
     return;
   }
 
@@ -3364,12 +3369,12 @@ async function sendRecordById(id) {
         target: collectDeliverySettings().target,
         sent: false,
         sentAt: new Date().toISOString(),
-        error: error.message || '送信失敗',
-        sendError: error.message || '送信失敗',
+        error: error.message || '保存失敗',
+        sendError: error.message || '保存失敗',
       }),
     };
     await refreshRecordViews(updatedRecord);
-    showError(error.message || 'Webhook送信に失敗しました');
+    showError(error.message || '自動保存に失敗しました');
   } finally {
     sendingRecordId = null;
     if (latestResultRecord) updateActionLinks(latestResultRecord);
@@ -3378,7 +3383,7 @@ async function sendRecordById(id) {
 
 async function sendLatestRecord() {
   if (!latestResultRecord) {
-    showError('先に評価を実行してください');
+    showError('先に写真をチェックしてください');
     return;
   }
   await sendRecordById(latestResultRecord.id);
