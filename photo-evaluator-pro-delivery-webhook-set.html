@@ -1314,7 +1314,6 @@
 
     <section class="welcome-panel">
       <div>
-        <span class="mini-info-chip">はじめてでも迷いにくい3ステップ</span>
         <h2>このアプリでできること</h2>
         <p>写真をアップロードすると、その場で分かりやすく点数化し、あとから履歴で見返せます。保存や精度改善の仕組みは裏側で動くので、まずは気軽に写真をチェックしてみてください。</p>
       </div>
@@ -1332,7 +1331,7 @@
         <article class="step-card">
           <span class="step-num">3</span>
           <h3>結果を見る</h3>
-          <p>結果は履歴にも残り、画像は自動保存されます。必要なら感想を送って精度改善にも協力できます。</p>
+          <p>必要なら感想を送って精度改善にも協力できます。</p>
         </article>
       </div>
     </section>
@@ -2766,30 +2765,6 @@ function buildResultHTML(record, options = {}) {
     </div>
 
     <div class="scores-grid">${scoreCardsHtml}</div>
-
-    <div class="comments-section">
-      <div class="comment-card">
-        <span class="comment-icon">✅</span>
-        <div>
-          <p class="comment-label label-good">強み・良かった点</p>
-          <p class="comment-text">${escapeHtml(record.strengthsComment)}</p>
-        </div>
-      </div>
-      <div class="comment-card">
-        <span class="comment-icon">💡</span>
-        <div>
-          <p class="comment-label label-imp">改善のヒント</p>
-          <p class="comment-text">${escapeHtml(record.improvementComment)}</p>
-        </div>
-      </div>
-      <div class="comment-card">
-        <span class="comment-icon">📝</span>
-        <div>
-          <p class="comment-label label-all">総合コメント</p>
-          <p class="comment-text">${escapeHtml(record.overallComment)}</p>
-        </div>
-      </div>
-    </div>
 
     ${buildMlSummaryHtml(record)}
     ${includeFeedback ? buildFeedbackSectionHtml(record) : ''}
