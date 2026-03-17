@@ -1444,8 +1444,7 @@ const SCORE_ITEMS = [
 ];
 
 const SCENE_TYPE_LABELS = {
-  portrait: '人物写真',
-  nonPortrait: '非人物写真',
+  general: '写真全体',
 };
 
 const ITEM_COMMENT_MAP = {
@@ -2079,68 +2078,6 @@ function analyzeSpatialFeatures(gray, width, height, stats) {
   };
 }
 
-async function detectFacesFromImage(image) {
-  if (!('FaceDetector' in window)) {
-    return { supported: false, faces: [] };
-  }
-  try {
-    const detector = new FaceDetector({ fastMode: true, maxDetectedFaces: 5 });
-    const faces = await detector.detect(image);
-    return { supported: true, faces };
-  } catch (error) {
-    console.warn('FaceDetector failed', error);
-    return { supported: false, faces: [] };
-  }
-}
-
-function computeFaceMetrics(faces, width, height) {
-  if (!faces.length) {
-    return {
-      hasFace: false,
-      faceCount: 0,
-      faceAreaRatio: 0,
-      faceCenteredness: 0,
-      faceStability: 0,
-      primaryFaceXRatio: 0.5,
-      primaryFaceYRatio: 0.5,
-    };
-  }
-
-  const primary = [...faces].sort((a, b) =>
-    (b.boundingBox.width * b.boundingBox.height) - (a.boundingBox.width * a.boundingBox.height)
-  )[0];
-  const box = primary.boundingBox;
-  const faceAreaRatio = (box.width * box.height) / (width * height);
-  const centerX = box.x + box.width / 2;
-  const centerY = box.y + box.height / 2;
-  const dx = Math.abs(centerX - width / 2) / (width / 2);
-  const dy = Math.abs(centerY - height / 2) / (height / 2);
-  const faceCenteredness = 1 - clamp((dx + dy) / 1.45, 0, 1);
-  const aspect = box.width / Math.max(1, box.height);
-  const faceStability = clamp(1 - Math.abs(aspect - 0.85) / 0.7, 0.2, 1);
-
-  return {
-    hasFace: true,
-    faceCount: faces.length,
-    faceAreaRatio,
-    faceCenteredness,
-    faceStability,
-    primaryFaceXRatio: centerX / width,
-    primaryFaceYRatio: centerY / height,
-  };
-}
-
-function detectSceneType(metrics) {
-  const faceMetrics = metrics.faceMetrics;
-  if (!faceMetrics.hasFace) return 'nonPortrait';
-
-  const strongFace = faceMetrics.faceAreaRatio >= 0.05;
-  const mediumFace = faceMetrics.faceAreaRatio >= 0.032 && faceMetrics.faceCenteredness >= 0.58;
-  const centeredSingleFace = faceMetrics.faceAreaRatio >= 0.024 && faceMetrics.faceCenteredness >= 0.74 && faceMetrics.faceCount <= 2;
-
-  return (strongFace || mediumFace || centeredSingleFace) ? 'portrait' : 'nonPortrait';
-}
-
 function deriveScoresFromMetrics(metrics) {
   const lightScore = clamp(round(
     scoreFromDeviation(metrics.brightnessMean, 138, 22, 62) * 0.34 +
@@ -2157,7 +2094,6 @@ function deriveScoresFromMetrics(metrics) {
     (1 - normalize(metrics.noiseEstimate, 3, 18)) * 12
   ), 14, 98);
 
-  const sceneType = detectSceneType(metrics);
   const subjectCenterSupport = 1 - clamp(
     Math.hypot(metrics.subjectXRatio - 0.5, metrics.subjectYRatio - 0.5) / 0.72,
     0,
@@ -2169,9 +2105,7 @@ function deriveScoresFromMetrics(metrics) {
     metrics.topBottomBalance * 18 +
     metrics.thirdsAlignment * 28 +
     normalize(metrics.subjectConcentration, 0.035, 0.14) * 17 +
-    (sceneType === 'portrait'
-      ? metrics.faceMetrics.faceCenteredness * 14
-      : subjectCenterSupport * 14)
+    subjectCenterSupport * 14
   ), 18, 97);
 
   const colorScore = clamp(round(
@@ -2209,28 +2143,12 @@ function deriveScoresFromMetrics(metrics) {
     (1 - metrics.backgroundClutter) * 20
   ), 18, 96);
 
-  const expressionScore = clamp(round(
-    normalize(metrics.faceMetrics.faceAreaRatio, 0.03, 0.18) * 36 +
-    metrics.faceMetrics.faceCenteredness * 24 +
-    metrics.faceMetrics.faceStability * 18 +
-    normalize(technicalScore, 45, 95) * 12 +
-    normalize(lightScore, 45, 95) * 10
-  ), 28, 95);
-
   const subjectScore = clamp(round(
-    sceneType === 'portrait'
-      ? (
-        expressionScore * 0.38 +
-        backgroundScore * 0.27 +
-        cleanlinessScore * 0.2 +
-        normalize(metrics.subjectConcentration, 0.03, 0.14) * 15
-      )
-      : (
-        organizationScore * 0.42 +
-        informationScore * 0.24 +
-        subjectCenterSupport * 14 +
-        normalize(metrics.subjectConcentration, 0.03, 0.13) * 20
-      )
+    organizationScore * 0.34 +
+    informationScore * 0.22 +
+    backgroundScore * 0.22 +
+    subjectCenterSupport * 10 +
+    normalize(metrics.subjectConcentration, 0.03, 0.13) * 12
   ), 18, 97);
 
   const impressionScore = clamp(round(
@@ -2239,7 +2157,7 @@ function deriveScoresFromMetrics(metrics) {
     colorScore * 0.15 +
     technicalScore * 0.17 +
     subjectScore * 0.17 +
-    (sceneType === 'portrait' ? backgroundScore * 0.14 : organizationScore * 0.14)
+    organizationScore * 0.14
   ), 18, 98);
 
   const totalScore = clamp(round(
@@ -2252,7 +2170,7 @@ function deriveScoresFromMetrics(metrics) {
   ), 16, 98);
 
   return {
-    sceneType,
+    sceneType: 'general',
     compositionScore,
     lightScore,
     colorScore,
@@ -2260,7 +2178,7 @@ function deriveScoresFromMetrics(metrics) {
     subjectScore,
     brightnessScore: lightScore,
     focusScore: technicalScore,
-    expressionScore,
+    expressionScore: 0,
     backgroundScore,
     cleanlinessScore,
     organizationScore,
@@ -2271,7 +2189,6 @@ function deriveScoresFromMetrics(metrics) {
 }
 
 function buildImprovementSignals(metrics, scores) {
-  const sceneType = scores.sceneType || detectSceneType(metrics);
   const signals = [];
   if (metrics.overexposedRatio > 0.08) signals.push('白飛びが目立ちます');
   if (metrics.underexposedRatio > 0.12) signals.push('黒つぶれが多めです');
@@ -2281,12 +2198,10 @@ function buildImprovementSignals(metrics, scores) {
   if (metrics.thirdsAlignment < 0.35) signals.push('主題配置が三分割構図から外れています');
   if (scores.colorScore < 60) signals.push('色のまとまりがやや弱めです');
   if (scores.subjectScore < 60) signals.push('主題の見せ方に改善余地があります');
-  if (sceneType === 'portrait' && !metrics.faceDetectionSupported) signals.push('顔の検出はこの端末では利用できません');
   return signals;
 }
 
 function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
-  const sceneType = scores.sceneType || detectSceneType(metrics);
   const activeKeys = SCORE_ITEMS.map(item => item.key);
   const ranked = Object.entries(scores)
     .filter(([key]) => activeKeys.includes(key))
@@ -2303,9 +2218,7 @@ function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
   if (scores.technicalScore < 60) concreteIssues.push(`シャープネス指標${round(metrics.sharpnessRaw, 1)}で輪郭が弱めです`);
   if (metrics.noiseEstimate > 10.5) concreteIssues.push(`ノイズ推定値${round(metrics.noiseEstimate, 1)}でざらつきがあります`);
   if (scores.colorScore < 60) concreteIssues.push(`彩度比${round(metrics.saturationRatio, 2)}とコントラスト${round(metrics.contrast, 2)}のバランスが弱めです`);
-  if (scores.subjectScore < 60) concreteIssues.push(sceneType === 'portrait'
-    ? `顔面積比${round(metrics.faceMetrics.faceAreaRatio * 100, 1)}%で主題の押し出しが弱めです`
-    : `背景情報量${round(metrics.backgroundInformation, 2)}が適正域から外れています`);
+  if (scores.subjectScore < 60) concreteIssues.push(`背景情報量${round(metrics.backgroundInformation, 2)}が適正域から外れています`);
 
   const weakestBase = pick(ITEM_COMMENT_MAP[worstKey][getTier(scores[worstKey])], seed + 11);
   const improvementComment = [
@@ -2335,8 +2248,6 @@ async function analyzeImageFile(file, preferredSource = '') {
   const { ctx, width, height } = createCanvasFromImage(image, 768);
   const stats = extractImageStats(ctx, width, height);
   const spatial = analyzeSpatialFeatures(stats.gray, width, height, stats);
-  const faceDetection = await detectFacesFromImage(image);
-  const faceMetrics = computeFaceMetrics(faceDetection.faces, width, height);
 
   const metrics = {
     width,
@@ -2362,8 +2273,16 @@ async function analyzeImageFile(file, preferredSource = '') {
     subjectXRatio: spatial.subjectXRatio,
     subjectYRatio: spatial.subjectYRatio,
     edgeBands: spatial.edgeBands,
-    faceMetrics,
-    faceDetectionSupported: faceDetection.supported,
+    faceMetrics: {
+      hasFace: false,
+      faceCount: 0,
+      faceAreaRatio: 0,
+      faceCenteredness: 0,
+      faceStability: 0,
+      primaryFaceXRatio: 0.5,
+      primaryFaceYRatio: 0.5,
+    },
+    faceDetectionSupported: false,
   };
 
   const scores = deriveScoresFromMetrics(metrics);
@@ -2580,7 +2499,7 @@ async function sendRecordToWebhook(record) {
 
 function buildAnalysisMeta(metrics, scores) {
   return {
-    sceneType: scores.sceneType,
+    sceneType: 'general',
     brightnessMean: round(metrics.brightnessMean),
     brightnessVariance: round(metrics.brightnessVariance, 1),
     whiteClipRatio: round(metrics.overexposedRatio * 100, 1),
@@ -2595,11 +2514,11 @@ function buildAnalysisMeta(metrics, scores) {
     subjectConcentration: round(metrics.subjectConcentration, 3),
     backgroundInformation: round(metrics.backgroundInformation, 2),
     backgroundClutter: round(metrics.backgroundClutter, 2),
-    faceDetected: metrics.faceMetrics.hasFace,
-    faceCount: metrics.faceMetrics.faceCount,
-    faceAreaRatio: round(metrics.faceMetrics.faceAreaRatio * 100, 1),
-    faceCenteredness: round(metrics.faceMetrics.faceCenteredness, 2),
-    faceDetectionSupported: metrics.faceDetectionSupported,
+    faceDetected: false,
+    faceCount: 0,
+    faceAreaRatio: 0,
+    faceCenteredness: 0,
+    faceDetectionSupported: false,
     totalScore: scores.totalScore,
   };
 }
@@ -2709,13 +2628,11 @@ function renderScoreBars(scope = document) {
 function buildMetaLine(record) {
   const meta = record.analysisMeta || {};
   return [
-    `写真タイプ ${SCENE_TYPE_LABELS[record.sceneType || meta.sceneType || 'portrait'] || SCENE_TYPE_LABELS.portrait}`,
     Number.isFinite(meta.brightnessMean) ? `平均輝度 ${meta.brightnessMean}` : '',
     Number.isFinite(meta.whiteClipRatio) ? `白飛び ${meta.whiteClipRatio}%` : '',
     Number.isFinite(meta.blackClipRatio) ? `黒つぶれ ${meta.blackClipRatio}%` : '',
     Number.isFinite(meta.sharpnessRaw) ? `シャープネス ${meta.sharpnessRaw}` : '',
     Number.isFinite(meta.noiseEstimate) ? `ノイズ ${meta.noiseEstimate}` : '',
-    meta.faceDetectionSupported ? (meta.faceDetected ? `顔の検出 ${meta.faceCount}件` : '顔の検出 0件') : '顔検出はこの端末では利用できません',
   ].filter(Boolean).join(' ／ ');
 }
 
@@ -2819,7 +2736,6 @@ function buildFeedbackSectionHtml(record) {
 
 function buildResultHTML(record, options = {}) {
   const totalColor = getScoreColor(record.totalScore);
-  const sceneType = record.sceneType || record.analysisMeta?.sceneType || 'portrait';
   const scoreItems = SCORE_ITEMS;
   const includeFeedback = Boolean(options.includeFeedback);
   const badgeBackground = record.totalScore >= 85 ? 'var(--green-dim)'
@@ -2851,7 +2767,6 @@ function buildResultHTML(record, options = {}) {
         <span class="total-unit">/100</span>
       </div>
       <span class="total-badge" style="color:${totalColor.text};background:${badgeBackground}">${totalColor.label}</span>
-      <p style="margin-top:14px;font-size:0.82rem;color:var(--text);font-weight:700">写真タイプ: ${SCENE_TYPE_LABELS[sceneType] || SCENE_TYPE_LABELS.portrait}</p>
       <p style="margin-top:14px;font-size:0.74rem;color:var(--text-muted)">${escapeHtml(buildMetaLine(record))}</p>
     </div>
 
