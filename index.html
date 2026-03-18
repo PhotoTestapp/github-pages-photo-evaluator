@@ -779,7 +779,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 14px;
     flex: 1;
     min-width: 0;
   }
@@ -810,20 +810,22 @@
     flex-direction: column;
     gap: 6px;
     flex-shrink: 0;
-    width: 72px;
+    width: 96px;
+    min-width: 96px;
   }
   .btn-detail, .btn-delete {
     width: 100%;
     min-width: 0;
-    padding: 6px 0;
+    padding: 7px 10px;
     border-radius: 6px;
     font-family: inherit;
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
     border: none;
     transition: background-color 0.15s, color 0.15s;
     min-height: 36px;
+    white-space: nowrap;
   }
   .btn-detail { background: var(--surface2); color: var(--text-muted); }
   .btn-detail:hover { background: var(--accent); color: #0f0f11; }
