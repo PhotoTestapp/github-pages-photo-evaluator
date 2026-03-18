@@ -1699,6 +1699,8 @@ const MAX_HISTORY_ITEMS = 100;
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 const MAX_BATCH_UPLOADS = 5;
 const DELIVERY_MAX_SIDE = 1920;
+const ANALYSIS_MAX_SIDE_DESKTOP = 768;
+const ANALYSIS_MAX_SIDE_MOBILE = 512;
 const BROWSER_ML_MODEL_PATH = './photo_eval_model.json';
 
 let currentFile = null;
@@ -1727,6 +1729,15 @@ function clamp(value, min, max) {
 function round(value, digits = 0) {
   const scale = 10 ** digits;
   return Math.round(value * scale) / scale;
+}
+
+function isMobileLikeDevice() {
+  const userAgent = navigator.userAgent || '';
+  return /iPhone|iPad|iPod|Android/i.test(userAgent) || window.innerWidth <= 820;
+}
+
+function getAnalysisMaxSide() {
+  return isMobileLikeDevice() ? ANALYSIS_MAX_SIDE_MOBILE : ANALYSIS_MAX_SIDE_DESKTOP;
 }
 
 function normalize(value, min, max) {
@@ -2685,8 +2696,9 @@ function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
 }
 
 async function analyzeImageFile(file, preferredSource = '') {
+  await new Promise(resolve => requestAnimationFrame(() => resolve()));
   const image = await loadImageElement(preferredSource || file);
-  const { ctx, width, height } = createCanvasFromImage(image, 768);
+  const { ctx, width, height } = createCanvasFromImage(image, getAnalysisMaxSide());
   const stats = extractImageStats(ctx, width, height);
   const spatial = analyzeSpatialFeatures(stats.gray, width, height, stats);
 
