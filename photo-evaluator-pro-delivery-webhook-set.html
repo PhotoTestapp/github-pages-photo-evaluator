@@ -526,6 +526,41 @@
     appearance: auto;
     background-image: none;
   }
+  .visually-hidden-select {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .segmented-control {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .segmented-btn {
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .segmented-btn.active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #081018;
+  }
   .feedback-field textarea {
     min-height: 88px;
     resize: vertical;
@@ -2896,7 +2931,12 @@ function buildFeedbackSectionHtml(record) {
       <div class="feedback-grid">
         <div class="feedback-field">
           <label class="field-label" for="feedback-fairness">この結果はイメージに近いですか</label>
-          <select id="feedback-fairness">
+          <div class="segmented-control" role="group" aria-label="この結果はイメージに近いですか">
+            <button type="button" class="segmented-btn ${feedback.fairness === 'valid' ? 'active' : ''}" aria-pressed="${feedback.fairness === 'valid' ? 'true' : 'false'}" onclick="setSegmentedValue('feedback-fairness', 'valid', event)">妥当</button>
+            <button type="button" class="segmented-btn ${feedback.fairness === 'too_high' ? 'active' : ''}" aria-pressed="${feedback.fairness === 'too_high' ? 'true' : 'false'}" onclick="setSegmentedValue('feedback-fairness', 'too_high', event)">高すぎる</button>
+            <button type="button" class="segmented-btn ${feedback.fairness === 'too_low' ? 'active' : ''}" aria-pressed="${feedback.fairness === 'too_low' ? 'true' : 'false'}" onclick="setSegmentedValue('feedback-fairness', 'too_low', event)">低すぎる</button>
+          </div>
+          <select id="feedback-fairness" class="visually-hidden-select" tabindex="-1" aria-hidden="true">
             <option value="">選択してください</option>
             <option value="valid" ${feedback.fairness === 'valid' ? 'selected' : ''}>妥当</option>
             <option value="too_high" ${feedback.fairness === 'too_high' ? 'selected' : ''}>高すぎる</option>
@@ -2985,6 +3025,22 @@ function renderModalRecord(record) {
   document.getElementById('modal-overlay').classList.add('active');
   updateActionLinks(record);
   renderScoreBars(document.getElementById('modal-body'));
+}
+
+function setSegmentedValue(selectId, value, event) {
+  event.stopPropagation();
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  select.value = value;
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+
+  const group = event.currentTarget?.closest('.segmented-control');
+  if (!group) return;
+  group.querySelectorAll('.segmented-btn').forEach(button => {
+    const active = button === event.currentTarget;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
 }
 
 function collectFeedbackFormValues() {
