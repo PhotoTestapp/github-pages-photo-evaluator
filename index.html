@@ -283,7 +283,7 @@
     aspect-ratio: 1 / 1;
     object-fit: cover;
     border-radius: 10px;
-    background: #000;
+    background: linear-gradient(135deg, rgba(79,141,247,0.12), rgba(255,255,255,0.65));
     display: block;
     margin-bottom: 8px;
   }
@@ -348,6 +348,22 @@
   @keyframes pulse-step {
     0%, 100% { background: var(--border); transform: scale(1); }
     50% { background: var(--accent); transform: scale(1.4); }
+  }
+  body.mobile-lite #loading {
+    padding: 28px 0;
+  }
+  body.mobile-lite .loader {
+    width: 34px;
+    height: 34px;
+    border-width: 2px;
+    margin-bottom: 10px;
+    animation-duration: 1.15s;
+  }
+  body.mobile-lite .loading-steps {
+    display: none;
+  }
+  body.mobile-lite .loading-label {
+    font-size: 0.82rem;
   }
 
   /* ── エラー ── */
@@ -1740,6 +1756,10 @@ function getAnalysisMaxSide() {
   return isMobileLikeDevice() ? ANALYSIS_MAX_SIDE_MOBILE : ANALYSIS_MAX_SIDE_DESKTOP;
 }
 
+function getQueueThumbnailMaxSide() {
+  return isMobileLikeDevice() ? 120 : 160;
+}
+
 function normalize(value, min, max) {
   if (max === min) return 0;
   return clamp((value - min) / (max - min), 0, 1);
@@ -2118,6 +2138,18 @@ function getUploadStatusLabel(item) {
   return '未評価';
 }
 
+async function buildQueueThumbnail(file) {
+  const image = await loadImageElement(file);
+  const canvas = document.createElement('canvas');
+  const maxSide = getQueueThumbnailMaxSide();
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+  canvas.width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+  canvas.height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+  const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.72);
+}
+
 function renderUploadQueue() {
   const wrap = document.getElementById('upload-queue');
   const grid = document.getElementById('upload-queue-grid');
@@ -2135,7 +2167,7 @@ function renderUploadQueue() {
   note.textContent = `${uploadQueue.length}枚まで保持できます。一覧から1枚選んで評価・保存します。`;
   grid.innerHTML = uploadQueue.map(item => `
     <button type="button" class="upload-queue-item ${item.id === currentUploadId ? 'active' : ''}" onclick="selectUploadItem('${escapeHtml(item.id)}')">
-      <img class="upload-queue-thumb" src="${item.previewUrl}" alt="${escapeHtml(item.file.name)}" loading="lazy">
+      <img class="upload-queue-thumb" src="${item.thumbUrl || item.previewUrl}" alt="${escapeHtml(item.file.name)}" loading="lazy" decoding="async">
       <div class="upload-queue-name">${escapeHtml(item.file.name)}</div>
       <div class="upload-queue-status">${escapeHtml(getUploadStatusLabel(item))}</div>
     </button>
@@ -2285,6 +2317,7 @@ async function setFiles(files) {
     id: createUploadId(),
     file,
     previewUrl: URL.createObjectURL(file),
+    thumbUrl: '',
     dataUrl: '',
     status: 'pending',
     evaluationResult: null,
@@ -2292,6 +2325,16 @@ async function setFiles(files) {
     saveState: 'pending',
   }));
   renderUploadQueue();
+  for (const item of uploadQueue) {
+    try {
+      item.thumbUrl = await buildQueueThumbnail(item.file);
+      if (uploadQueue.some(upload => upload.id === item.id)) {
+        renderUploadQueue();
+      }
+    } catch (error) {
+      console.warn('Thumbnail build failed', error);
+    }
+  }
   await selectUploadItem(uploadQueue[0].id);
 }
 
@@ -3756,6 +3799,7 @@ async function sendLatestRecord() {
 
 applyDeliverySettings();
 updateLaunchWarning();
+document.body.classList.toggle('mobile-lite', isMobileLikeDevice());
 updateActionLinks();
 void refreshMlStatus();
 void renderHistory();
