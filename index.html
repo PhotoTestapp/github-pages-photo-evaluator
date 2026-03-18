@@ -37,7 +37,7 @@
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: auto; }
 
   body {
     font-family: 'Noto Sans JP', sans-serif;
@@ -46,6 +46,14 @@
     min-height: 100vh;
     line-height: 1.6;
     padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  button,
+  select,
+  input,
+  textarea,
+  a {
+    touch-action: manipulation;
   }
 
   /* ── ノイズテクスチャ背景 ── */
@@ -64,7 +72,6 @@
     top: 0;
     z-index: 100;
     background: rgba(15,15,17,0.85);
-    backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     padding: 0 20px;
   }
@@ -100,7 +107,7 @@
     padding: 6px 14px;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background-color 0.15s, color 0.15s;
     letter-spacing: 0.03em;
   }
   .tab-btn:hover { background: var(--surface2); color: var(--text); }
@@ -152,7 +159,7 @@
     padding: 48px 24px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background-color 0.2s, transform 0.2s;
     background: var(--surface);
     position: relative;
     overflow: hidden;
@@ -217,7 +224,7 @@
     border-radius: 6px;
     cursor: pointer;
     font-family: inherit;
-    transition: all 0.15s;
+    transition: border-color 0.15s, color 0.15s, background-color 0.15s;
     text-decoration: none;
   }
   .preview-change:hover, .btn-secondary:hover { border-color: var(--text-muted); color: var(--text); }
@@ -234,7 +241,7 @@
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
     letter-spacing: 0.04em;
     margin-top: 16px;
   }
@@ -512,6 +519,12 @@
     font-size: 0.9rem;
     padding: 12px 13px;
     outline: none;
+    min-height: 48px;
+  }
+  .feedback-field select {
+    -webkit-appearance: menulist;
+    appearance: auto;
+    background-image: none;
   }
   .feedback-field textarea {
     min-height: 88px;
@@ -540,7 +553,7 @@
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
-    transition: all 0.15s;
+    transition: background-color 0.15s, box-shadow 0.15s, transform 0.15s;
   }
   .btn-feedback:hover {
     transform: translateY(-1px);
@@ -695,13 +708,13 @@
     gap: 12px;
     padding: 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
     animation: fadeUp 0.3s ease-out both;
     content-visibility: auto;
     contain: layout paint style;
     contain-intrinsic-size: 112px;
   }
-  .history-card:hover { border-color: var(--accent-border); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .history-card:hover { border-color: var(--accent-border); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.22); }
   .history-thumb {
     width: 88px;
     aspect-ratio: 1 / 1;
@@ -774,7 +787,8 @@
     font-weight: 600;
     cursor: pointer;
     border: none;
-    transition: all 0.15s;
+    transition: background-color 0.15s, color 0.15s;
+    min-height: 36px;
   }
   .btn-detail { background: var(--surface2); color: var(--text-muted); }
   .btn-detail:hover { background: var(--accent); color: #0f0f11; }
@@ -832,7 +846,7 @@
     padding: 4px;
     line-height: 1;
     border-radius: 6px;
-    transition: all 0.15s;
+    transition: background-color 0.15s, color 0.15s;
   }
   .modal-close:hover { background: var(--surface2); color: var(--text); }
   .modal-img { width: 100%; max-height: 300px; object-fit: contain; background: #000; display: block; }
@@ -851,10 +865,67 @@
     .container { padding: 24px 16px 60px; }
     .preview-bar, .result-header { align-items: flex-start; }
     .ml-summary-grid, .feedback-grid { grid-template-columns: 1fr; }
+    .history-card {
+      align-items: flex-start;
+    }
+    .history-thumb {
+      width: 76px;
+    }
+    .history-info {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .history-card-footer {
+      width: 100%;
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+    .btn-detail,
+    .btn-delete {
+      flex: 1 1 96px;
+      width: auto;
+    }
   }
   @media (max-width: 380px) {
     .scores-grid { grid-template-columns: 1fr; }
     #history-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    body::before {
+      display: none;
+    }
+    nav {
+      background: rgba(255,255,255,0.96);
+      box-shadow: none;
+    }
+    #modal-overlay {
+      backdrop-filter: none;
+    }
+    .history-card:hover,
+    .btn-primary:hover:not(:disabled),
+    .btn-feedback:hover,
+    .btn-detail:hover,
+    .btn-delete:hover,
+    .preview-change:hover,
+    .btn-secondary:hover,
+    .tab-btn:hover,
+    #dropzone:hover {
+      transform: none;
+      box-shadow: none;
+    }
+    .history-card,
+    .btn-primary,
+    .btn-feedback,
+    .tab-btn,
+    .preview-change,
+    .btn-secondary,
+    .btn-detail,
+    .btn-delete,
+    .modal-close,
+    #dropzone {
+      transition-duration: 0.01ms;
+    }
   }
 
   /* ── General User Redesign Overrides ── */
