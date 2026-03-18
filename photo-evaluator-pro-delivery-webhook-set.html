@@ -689,7 +689,6 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    overflow: hidden;
     cursor: pointer;
     transition: all 0.2s;
     animation: fadeUp 0.3s ease-out both;
@@ -717,12 +716,18 @@
     font-family: 'DM Mono', monospace;
     backdrop-filter: blur(8px);
   }
-  .history-info { padding: 12px; }
-  .history-info-top {
+  .history-info {
+    padding: 14px 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    gap: 12px;
+  }
+  .history-info-top {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
   .history-score-big {
     font-family: 'DM Mono', monospace;
@@ -743,6 +748,7 @@
   .history-card-footer {
     display: flex;
     gap: 6px;
+    flex-shrink: 0;
   }
   .btn-detail, .btn-delete {
     flex: 1;
@@ -3152,25 +3158,14 @@ async function clearAllHistory() {
 
 function buildHistoryCard(record, index) {
   const totalColor = getScoreColor(record.totalScore);
-  const badgeBackground = record.totalScore >= 85 ? 'rgba(74,222,128,0.85)'
-    : record.totalScore >= 70 ? 'rgba(96,165,250,0.85)'
-      : record.totalScore >= 50 ? 'rgba(251,191,36,0.85)'
-        : 'rgba(248,113,113,0.85)';
-  const status = getDeliveryStatus(record);
 
   return `
     <div class="history-card" style="animation-delay:${index * 0.04}s" onclick="openModal(${record.id})">
-      <div class="history-thumb">
-        <img src="${record.imageSrc}" alt="${escapeHtml(record.fileName)}" loading="lazy">
-        <div class="history-score-badge" style="background:${badgeBackground};color:#0f0f11">${record.totalScore}</div>
-      </div>
       <div class="history-info">
         <div class="history-info-top">
           <span class="history-score-big" style="color:${totalColor.text}">${record.totalScore}<span style="font-size:0.7em;color:var(--text-dim)">/100</span></span>
           <span class="history-date">${escapeHtml(formatDate(record.createdAt))}</span>
         </div>
-        <p class="history-comment">${escapeHtml(record.overallComment)}</p>
-        <p class="history-comment" style="margin-bottom:8px;color:var(--text-dim)">保存状態: ${escapeHtml(status.label)} / Google Drive</p>
         <div class="history-card-footer">
           <button class="btn-detail" onclick="openModal(${record.id});event.stopPropagation()">詳細</button>
           <button class="btn-delete" onclick="deleteRecord(${record.id}, event)">削除</button>
