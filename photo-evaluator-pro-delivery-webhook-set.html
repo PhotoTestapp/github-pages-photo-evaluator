@@ -229,6 +229,76 @@
   }
   .preview-change:hover, .btn-secondary:hover { border-color: var(--text-muted); color: var(--text); }
 
+  .upload-queue {
+    display: none;
+    margin-top: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+  }
+  .upload-queue.active { display: block; }
+  .upload-queue-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .upload-queue-title {
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+  }
+  .upload-queue-note {
+    font-size: 0.76rem;
+    color: var(--text-dim);
+  }
+  .upload-queue-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  .upload-queue-item {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface2);
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .upload-queue-item:hover {
+    border-color: var(--accent-border);
+    transform: translateY(-1px);
+  }
+  .upload-queue-item.active {
+    border-color: var(--blue);
+    box-shadow: 0 10px 22px rgba(96,165,250,0.12);
+  }
+  .upload-queue-thumb {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 10px;
+    background: #000;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .upload-queue-name {
+    font-size: 0.74rem;
+    line-height: 1.45;
+    color: var(--text);
+    word-break: break-word;
+    margin-bottom: 4px;
+  }
+  .upload-queue-status {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
   /* ── ボタン ── */
   .btn-primary {
     width: 100%;
@@ -1444,10 +1514,10 @@
 
     <!-- ドロップゾーン -->
     <div id="dropzone" onclick="document.getElementById('file-input').click()">
-      <input type="file" id="file-input" accept="image/jpeg,image/jpg,image/png,image/webp,image/heif,image/heic,.jpg,.jpeg,.png,.webp,.heif,.heic">
+      <input type="file" id="file-input" multiple accept="image/jpeg,image/jpg,image/png,image/webp,image/heif,image/heic,.jpg,.jpeg,.png,.webp,.heif,.heic">
       <span class="drop-icon">📷</span>
       <p class="drop-title">ここをタップして写真を選ぶ</p>
-      <p class="drop-sub">ドラッグ＆ドロップにも対応しています ／ JPG・JPEG・PNG・WebP・HEIF ／ 最大25MB</p>
+      <p class="drop-sub">ドラッグ＆ドロップにも対応しています ／ JPG・JPEG・PNG・WebP・HEIF ／ 1枚最大25MB ／ 5枚まで</p>
     </div>
 
     <!-- プレビュー -->
@@ -1460,6 +1530,16 @@
           <button class="preview-change" onclick="resetFile()">選び直す</button>
         </div>
       </div>
+    </div>
+
+    <div class="upload-queue" id="upload-queue">
+      <div class="upload-queue-head">
+        <div>
+          <p class="upload-queue-title">写真一覧</p>
+          <p class="upload-queue-note" id="upload-queue-note">一覧から1枚選んで評価します</p>
+        </div>
+      </div>
+      <div class="upload-queue-grid" id="upload-queue-grid"></div>
     </div>
 
     <div id="error-box"></div>
@@ -1617,6 +1697,7 @@ const DB_VERSION = 1;
 const STORE_NAME = 'history';
 const MAX_HISTORY_ITEMS = 100;
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+const MAX_BATCH_UPLOADS = 5;
 const DELIVERY_MAX_SIDE = 1920;
 const BROWSER_ML_MODEL_PATH = './photo_eval_model.json';
 
@@ -1626,6 +1707,9 @@ let currentFileDataUrl = '';
 let latestResultRecord = null;
 let sendingRecordId = null;
 let modalRecordId = null;
+let uploadQueue = [];
+let currentUploadId = null;
+let currentBatchId = '';
 let browserMlModelPromise = null;
 let mlRuntimeState = {
   mode: 'Rule-based',
@@ -2006,10 +2090,88 @@ function updateLaunchWarning() {
 }
 
 function revokeCurrentFileUrl() {
-  if (currentFileUrl) {
-    URL.revokeObjectURL(currentFileUrl);
-    currentFileUrl = '';
+  currentFileUrl = '';
+}
+
+function createUploadId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getActiveUpload() {
+  return uploadQueue.find(item => item.id === currentUploadId) || null;
+}
+
+function getUploadStatusLabel(item) {
+  if (item.status === 'saved') return '保存済み';
+  if (item.status === 'evaluated') return '評価済み';
+  return '未評価';
+}
+
+function renderUploadQueue() {
+  const wrap = document.getElementById('upload-queue');
+  const grid = document.getElementById('upload-queue-grid');
+  const note = document.getElementById('upload-queue-note');
+  if (!wrap || !grid || !note) return;
+
+  if (!uploadQueue.length) {
+    wrap.classList.remove('active');
+    grid.innerHTML = '';
+    note.textContent = '一覧から1枚選んで評価します';
+    return;
   }
+
+  wrap.classList.add('active');
+  note.textContent = `${uploadQueue.length}枚まで保持できます。一覧から1枚選んで評価・保存します。`;
+  grid.innerHTML = uploadQueue.map(item => `
+    <button type="button" class="upload-queue-item ${item.id === currentUploadId ? 'active' : ''}" onclick="selectUploadItem('${escapeHtml(item.id)}')">
+      <img class="upload-queue-thumb" src="${item.previewUrl}" alt="${escapeHtml(item.file.name)}" loading="lazy">
+      <div class="upload-queue-name">${escapeHtml(item.file.name)}</div>
+      <div class="upload-queue-status">${escapeHtml(getUploadStatusLabel(item))}</div>
+    </button>
+  `).join('');
+}
+
+function applyFeedbackDraftToForm(draft = {}) {
+  const fairness = document.getElementById('feedback-fairness');
+  if (fairness) fairness.value = draft.fairness || '';
+  const genre = document.getElementById('feedback-genre');
+  if (genre) genre.value = draft.genre || '';
+  syncFeedbackGenreButtons();
+}
+
+function persistCurrentFeedbackDraft() {
+  const activeUpload = getActiveUpload();
+  if (!activeUpload || !latestResultRecord || activeUpload.recordId !== latestResultRecord.id) return;
+  activeUpload.feedbackDraft = collectFeedbackFormValues();
+}
+
+async function selectUploadItem(uploadId) {
+  persistCurrentFeedbackDraft();
+  const upload = uploadQueue.find(item => item.id === uploadId);
+  if (!upload) return;
+
+  currentUploadId = upload.id;
+  currentFile = upload.file;
+  currentFileUrl = upload.previewUrl;
+  currentFileDataUrl = upload.dataUrl || '';
+  document.getElementById('preview-img').src = upload.dataUrl || upload.previewUrl;
+  document.getElementById('preview-name').textContent = upload.file.name;
+  document.getElementById('dropzone').style.display = 'none';
+  document.getElementById('preview-wrap').style.display = 'block';
+  document.getElementById('eval-btn').disabled = false;
+
+  if (upload.evaluationResult) {
+    latestResultRecord = upload.evaluationResult;
+    renderCurrentRecord(upload.evaluationResult);
+    if (upload.feedbackDraft) applyFeedbackDraftToForm(upload.feedbackDraft);
+  } else {
+    latestResultRecord = null;
+    document.getElementById('result-section').style.display = 'none';
+  }
+
+  renderUploadQueue();
+  updateActionLinks(upload.evaluationResult || null);
+  hideError();
 }
 
 function updateActionLinks(record = null) {
@@ -2046,8 +2208,8 @@ function showPage(name) {
 }
 
 document.getElementById('file-input').addEventListener('change', event => {
-  const file = event.target.files[0];
-  if (file) void setFile(file);
+  const files = Array.from(event.target.files || []);
+  if (files.length) void setFiles(files);
   event.target.value = '';
 });
 
@@ -2065,49 +2227,66 @@ dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-ove
 dropzone.addEventListener('drop', event => {
   event.preventDefault();
   dropzone.classList.remove('drag-over');
-  const file = event.dataTransfer.files[0];
-  if (file) void setFile(file);
+  const files = Array.from(event.dataTransfer.files || []);
+  if (files.length) void setFiles(files);
 });
 
-async function setFile(file) {
+function validateUploadFile(file) {
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heif', 'image/heic'];
   const allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'heif', 'heic'];
   const extension = getFileExtension(file.name);
 
   if (!allowedTypes.includes(file.type) && !allowedExts.includes(extension)) {
-    showError('JPG・JPEG・PNG・WebP・HEIF形式のみ対応しています');
-    return;
+    throw new Error(`${file.name}: JPG・JPEG・PNG・WebP・HEIF形式のみ対応しています`);
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    showError('ファイルサイズは25MB以下にしてください');
-    return;
-  }
-
-  currentFile = file;
-  currentFileDataUrl = '';
-  latestResultRecord = null;
-  revokeCurrentFileUrl();
-  currentFileUrl = URL.createObjectURL(file);
-  hideError();
-
-  try {
-    const dataUrl = await readFileAsDataURL(file);
-    currentFileDataUrl = dataUrl;
-    document.getElementById('preview-img').src = dataUrl;
-    document.getElementById('preview-name').textContent = file.name;
-    document.getElementById('dropzone').style.display = 'none';
-    document.getElementById('preview-wrap').style.display = 'block';
-    document.getElementById('eval-btn').disabled = false;
-    document.getElementById('result-section').style.display = 'none';
-    updateActionLinks();
-  } catch (error) {
-    console.error(error);
-    resetFile();
-    showError('画像の読み込みに失敗しました。HEIF形式はブラウザによって未対応の場合があります');
+    throw new Error(`${file.name}: ファイルサイズは25MB以下にしてください`);
   }
 }
 
+function clearUploadQueue() {
+  uploadQueue.forEach(item => {
+    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+  });
+  uploadQueue = [];
+  currentUploadId = null;
+  currentBatchId = '';
+}
+
+async function setFiles(files) {
+  if (files.length > MAX_BATCH_UPLOADS) {
+    showError(`一度に選べる写真は${MAX_BATCH_UPLOADS}枚までです`);
+    return;
+  }
+
+  try {
+    files.forEach(validateUploadFile);
+  } catch (error) {
+    showError(error.message || '写真の読み込みに失敗しました');
+    return;
+  }
+
+  persistCurrentFeedbackDraft();
+  clearUploadQueue();
+  hideError();
+  currentBatchId = `batch-${Date.now()}`;
+  uploadQueue = files.map(file => ({
+    id: createUploadId(),
+    file,
+    previewUrl: URL.createObjectURL(file),
+    dataUrl: '',
+    status: 'pending',
+    evaluationResult: null,
+    feedbackDraft: null,
+    saveState: 'pending',
+  }));
+  renderUploadQueue();
+  await selectUploadItem(uploadQueue[0].id);
+}
+
 function resetFile() {
+  persistCurrentFeedbackDraft();
+  clearUploadQueue();
   currentFile = null;
   currentFileDataUrl = '';
   latestResultRecord = null;
@@ -2118,6 +2297,7 @@ function resetFile() {
   document.getElementById('preview-wrap').style.display = 'none';
   document.getElementById('eval-btn').disabled = true;
   document.getElementById('result-section').style.display = 'none';
+  renderUploadQueue();
   updateActionLinks();
   hideError();
 }
@@ -2790,7 +2970,8 @@ function buildAnalysisMeta(metrics, scores) {
 }
 
 async function runEvaluation() {
-  if (!currentFile) {
+  const activeUpload = getActiveUpload();
+  if (!currentFile || !activeUpload) {
     showError('先に写真を選んでください');
     return;
   }
@@ -2819,6 +3000,8 @@ async function runEvaluation() {
 
   try {
     const imageData = currentFileDataUrl || await readFileAsDataURL(currentFile);
+    activeUpload.dataUrl = imageData;
+    currentFileDataUrl = imageData;
     const analysis = await analyzeImageFile(currentFile, imageData);
     const ruleBasedScores = { ...analysis.scores };
     const featureVector = buildFeatureVector(analysis.metrics, ruleBasedScores);
@@ -2827,6 +3010,8 @@ async function runEvaluation() {
     const finalTotalScore = Math.round(Number(mlPrediction.predictedTotalScore ?? ruleBasedScores.totalScore));
     const record = {
       id: Date.now(),
+      batchId: currentBatchId,
+      uploadId: activeUpload.id,
       fileName: currentFile.name,
       imageSrc: imageData,
       createdAt: new Date().toISOString(),
@@ -2869,6 +3054,11 @@ async function runEvaluation() {
     };
 
     await saveToHistory(record);
+    activeUpload.recordId = record.id;
+    activeUpload.evaluationResult = record;
+    activeUpload.feedbackDraft = { ...record.feedback };
+    activeUpload.status = 'evaluated';
+    renderUploadQueue();
     renderCurrentRecord(record);
     if (collectDeliverySettings().autoSend) {
       await sendRecordById(record.id);
@@ -3083,6 +3273,7 @@ function renderCurrentRecord(record) {
   latestResultRecord = record;
   document.getElementById('result-section').style.display = 'block';
   document.getElementById('result-inner').innerHTML = buildResultHTML(record, { includeFeedback: true });
+  syncFeedbackGenreButtons();
   updateActionLinks(record);
   renderScoreBars(document.getElementById('result-section'));
 }
@@ -3247,6 +3438,13 @@ async function saveFeedbackForLatest() {
         status: publicResponse && !localResponse ? '精度改善用として保存済み' : '保存済み',
       },
     };
+    const activeUpload = getActiveUpload();
+    if (activeUpload && activeUpload.recordId === updatedRecord.id) {
+      activeUpload.evaluationResult = updatedRecord;
+      activeUpload.feedbackDraft = { ...updatedRecord.feedback };
+      activeUpload.status = 'saved';
+      renderUploadQueue();
+    }
     await refreshRecordViews(updatedRecord);
     if (localResponse && publicResponse) {
       setFeedbackStatus('端末内と精度改善用の両方に保存しました', 'success');
@@ -3446,6 +3644,11 @@ function closeModalDirect() {
 
 async function refreshRecordViews(record) {
   await saveToHistory(record);
+  const upload = uploadQueue.find(item => item.recordId === record.id || item.id === record.uploadId);
+  if (upload) {
+    upload.recordId = record.id;
+    upload.evaluationResult = record;
+  }
   if (latestResultRecord?.id === record.id) {
     renderCurrentRecord(record);
   }
@@ -3500,6 +3703,12 @@ async function sendRecordById(id) {
         sendError: [response.driveError, response.emailError].filter(Boolean).join(' / '),
       }),
     };
+    const upload = uploadQueue.find(item => item.recordId === id);
+    if (upload) {
+      upload.evaluationResult = updatedRecord;
+      if (upload.status === 'pending') upload.status = 'evaluated';
+      renderUploadQueue();
+    }
     await refreshRecordViews(updatedRecord);
   } catch (error) {
     console.error(error);
