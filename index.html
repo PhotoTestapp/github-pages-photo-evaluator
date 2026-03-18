@@ -988,25 +988,6 @@
     font-size: 0.84rem;
     line-height: 1.7;
   }
-  .mini-info-row {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 16px;
-  }
-  .mini-info-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    background: rgba(255,255,255,0.88);
-    border: 1px solid rgba(219,230,244,0.95);
-    border-radius: 999px;
-    color: #5f7390;
-    font-size: 0.82rem;
-    font-weight: 600;
-  }
-
   .launch-warning {
     background: #fff4f6;
     border-color: #f5c8d0;
@@ -1313,10 +1294,6 @@
     <input id="webhook-url" type="hidden" value="https://script.google.com/macros/s/AKfycbwJM6moHlemxgjr4yLo_HOu8fgT0sdSbgy-QUBemlmMPp297Ok9UrASZ8qzFUY-0AACGQ/exec">
 
     <section class="welcome-panel">
-      <div>
-        <h2>このアプリでできること</h2>
-        <p>写真をアップロードすると、その場で分かりやすく点数化し、あとから履歴で見返せます。保存や精度改善の仕組みは裏側で動くので、まずは気軽に写真をチェックしてみてください。</p>
-      </div>
       <div class="step-grid">
         <article class="step-card">
           <span class="step-num">1</span>
@@ -1331,7 +1308,7 @@
         <article class="step-card">
           <span class="step-num">3</span>
           <h3>結果を見る</h3>
-          <p>必要なら感想を送って精度改善にも協力できます。</p>
+          <p>総合点と項目ごとの結果を見ながら、写真の印象を分かりやすく確認できます。</p>
         </article>
       </div>
     </section>
@@ -2679,7 +2656,7 @@ async function runEvaluation() {
     '明るさや白飛びを確認しています...',
     'ピントや細かい写りを確認しています...',
     '構図や背景のまとまりを確認しています...',
-    '結果と保存データをまとめています...',
+    'チェック結果をまとめています...',
   ];
   let index = 0;
   loadingLabel.textContent = loadingLabels[0];
