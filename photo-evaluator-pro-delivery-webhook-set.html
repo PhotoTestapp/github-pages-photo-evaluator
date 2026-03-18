@@ -759,12 +759,15 @@
   }
   .history-card-footer {
     display: flex;
+    flex-direction: column;
     gap: 6px;
     flex-shrink: 0;
+    width: 72px;
   }
   .btn-detail, .btn-delete {
-    min-width: 64px;
-    padding: 5px 0;
+    width: 100%;
+    min-width: 0;
+    padding: 6px 0;
     border-radius: 6px;
     font-family: inherit;
     font-size: 0.72rem;
