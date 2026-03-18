@@ -689,23 +689,33 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
     cursor: pointer;
     transition: all 0.2s;
     animation: fadeUp 0.3s ease-out both;
+    content-visibility: auto;
+    contain: layout paint style;
+    contain-intrinsic-size: 112px;
   }
   .history-card:hover { border-color: var(--accent-border); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
   .history-thumb {
-    aspect-ratio: 4/3;
+    width: 88px;
+    aspect-ratio: 1 / 1;
     overflow: hidden;
     background: var(--surface2);
     position: relative;
+    flex-shrink: 0;
+    border-radius: 10px;
   }
   .history-thumb img {
     width: 100%; height: 100%;
     object-fit: cover;
-    transition: transform 0.3s;
+    display: block;
   }
-  .history-card:hover .history-thumb img { transform: scale(1.04); }
   .history-score-badge {
     position: absolute;
     top: 8px; right: 8px;
@@ -717,11 +727,13 @@
     backdrop-filter: blur(8px);
   }
   .history-info {
-    padding: 14px 12px;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    flex: 1;
+    min-width: 0;
   }
   .history-info-top {
     display: flex;
@@ -751,7 +763,7 @@
     flex-shrink: 0;
   }
   .btn-detail, .btn-delete {
-    flex: 1;
+    min-width: 64px;
     padding: 5px 0;
     border-radius: 6px;
     font-family: inherit;
@@ -3161,6 +3173,9 @@ function buildHistoryCard(record, index) {
 
   return `
     <div class="history-card" style="animation-delay:${index * 0.04}s" onclick="openModal(${record.id})">
+      <div class="history-thumb">
+        <img src="${record.imageSrc}" alt="${escapeHtml(record.fileName)}" loading="lazy" decoding="async" fetchpriority="low">
+      </div>
       <div class="history-info">
         <div class="history-info-top">
           <span class="history-score-big" style="color:${totalColor.text}">${record.totalScore}<span style="font-size:0.7em;color:var(--text-dim)">/100</span></span>
