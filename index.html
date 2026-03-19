@@ -1755,7 +1755,7 @@ function getAnalysisMaxSide() {
 }
 
 function getQueueThumbnailMaxSide() {
-  return isMobileLikeDevice() ? 180 : 240;
+  return isMobileLikeDevice() ? 240 : 360;
 }
 
 function normalize(value, min, max) {
@@ -2145,7 +2145,7 @@ async function buildQueueThumbnail(file) {
   canvas.height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
   const ctx = canvas.getContext('2d', { alpha: false });
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.88);
+  return canvas.toDataURL('image/jpeg', 0.94);
 }
 
 async function moveToNextUploadAfterFeedback() {
