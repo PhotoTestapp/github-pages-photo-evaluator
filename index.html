@@ -2198,7 +2198,7 @@ async function selectUploadItem(uploadId) {
   document.getElementById('preview-img').src = upload.dataUrl || upload.previewUrl;
   document.getElementById('preview-name').textContent = upload.file.name;
   document.getElementById('dropzone').style.display = 'none';
-  document.getElementById('preview-wrap').style.display = 'block';
+  document.getElementById('preview-wrap').style.display = 'none';
   document.getElementById('eval-btn').disabled = false;
 
   if (upload.evaluationResult) {
