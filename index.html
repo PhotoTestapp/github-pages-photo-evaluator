@@ -61,6 +61,7 @@
     content: '';
     position: fixed;
     inset: 0;
+    display: none;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
     pointer-events: none;
     z-index: 0;
@@ -336,7 +337,7 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-label { color: var(--text-muted); font-size: 0.875rem; }
-  .loading-steps { display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
+  .loading-steps { display: none; }
   .loading-step {
     width: 6px; height: 6px;
     background: var(--border);
@@ -859,7 +860,6 @@
     font-size: 0.75rem;
     font-weight: 700;
     font-family: 'DM Mono', monospace;
-    backdrop-filter: blur(8px);
   }
   .history-info {
     padding: 0;
@@ -930,7 +930,6 @@
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.85);
-    backdrop-filter: blur(4px);
     z-index: 200;
     overflow-y: auto;
     padding: 20px;
@@ -1444,7 +1443,6 @@
 
   #modal-overlay {
     background: rgba(46, 76, 114, 0.16);
-    backdrop-filter: blur(10px);
   }
   .modal-close:hover {
     background: #edf5ff;
@@ -1715,8 +1713,8 @@ const MAX_HISTORY_ITEMS = 100;
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 const MAX_BATCH_UPLOADS = 5;
 const DELIVERY_MAX_SIDE = 1920;
-const ANALYSIS_MAX_SIDE_DESKTOP = 768;
-const ANALYSIS_MAX_SIDE_MOBILE = 512;
+const ANALYSIS_MAX_SIDE_DESKTOP = 640;
+const ANALYSIS_MAX_SIDE_MOBILE = 384;
 const BROWSER_ML_MODEL_PATH = './photo_eval_model.json';
 
 let currentFile = null;
@@ -2743,6 +2741,7 @@ async function analyzeImageFile(file, preferredSource = '') {
   const image = await loadImageElement(preferredSource || file);
   const { ctx, width, height } = createCanvasFromImage(image, getAnalysisMaxSide());
   const stats = extractImageStats(ctx, width, height);
+  await new Promise(resolve => setTimeout(resolve, 0));
   const spatial = analyzeSpatialFeatures(stats.gray, width, height, stats);
 
   const metrics = {
@@ -3039,19 +3038,9 @@ async function runEvaluation() {
   loading.style.display = 'block';
   document.getElementById('result-section').style.display = 'none';
   hideError();
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-  const loadingLabels = [
-    '明るさや白飛びを確認しています...',
-    'ピントや細かい写りを確認しています...',
-    '構図や背景のまとまりを確認しています...',
-    'チェック結果をまとめています...',
-  ];
-  let index = 0;
-  loadingLabel.textContent = loadingLabels[0];
-  const interval = setInterval(() => {
-    index = (index + 1) % loadingLabels.length;
-    loadingLabel.textContent = loadingLabels[index];
-  }, 620);
+  loadingLabel.textContent = '写真を確認しています...';
 
   try {
     const imageData = currentFileDataUrl || await readFileAsDataURL(currentFile);
@@ -3115,7 +3104,6 @@ async function runEvaluation() {
     activeUpload.status = 'evaluated';
     renderUploadQueue();
     renderCurrentRecord(record);
-    clearInterval(interval);
     loading.style.display = 'none';
     evalButton.disabled = false;
     if (collectDeliverySettings().autoSend) {
@@ -3125,7 +3113,6 @@ async function runEvaluation() {
     console.error(error);
     showError(error.message || '写真の確認に失敗しました');
   } finally {
-    clearInterval(interval);
     loading.style.display = 'none';
     evalButton.disabled = false;
   }
