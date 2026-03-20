@@ -3743,17 +3743,18 @@ function closeModalDirect() {
   updateActionLinks(latestResultRecord);
 }
 
-async function refreshRecordViews(record) {
+async function refreshRecordViews(record, options = {}) {
+  const { skipVisibleRender = false } = options;
   await saveToHistory(record);
   const upload = uploadQueue.find(item => item.recordId === record.id || item.id === record.uploadId);
   if (upload) {
     upload.recordId = record.id;
     upload.evaluationResult = record;
   }
-  if (latestResultRecord?.id === record.id) {
+  if (!skipVisibleRender && latestResultRecord?.id === record.id) {
     renderCurrentRecord(record);
   }
-  if (modalRecordId === record.id) {
+  if (!skipVisibleRender && modalRecordId === record.id) {
     renderModalRecord(record);
   }
   await renderHistory();
@@ -3785,7 +3786,7 @@ async function sendRecordById(id) {
 
   sendingRecordId = id;
   const sendingRecord = { ...record, delivery: buildDeliveryState(record, 'sending') };
-  await refreshRecordViews(sendingRecord);
+  await refreshRecordViews(sendingRecord, { skipVisibleRender: true });
   hideError();
 
   try {
@@ -3810,7 +3811,7 @@ async function sendRecordById(id) {
       if (upload.status === 'pending') upload.status = 'evaluated';
       renderUploadQueue();
     }
-    await refreshRecordViews(updatedRecord);
+    await refreshRecordViews(updatedRecord, { skipVisibleRender: true });
   } catch (error) {
     console.error(error);
     const updatedRecord = {
@@ -3823,7 +3824,7 @@ async function sendRecordById(id) {
         sendError: error.message || '保存失敗',
       }),
     };
-    await refreshRecordViews(updatedRecord);
+    await refreshRecordViews(updatedRecord, { skipVisibleRender: true });
     showError(error.message || '自動保存に失敗しました');
   } finally {
     sendingRecordId = null;
