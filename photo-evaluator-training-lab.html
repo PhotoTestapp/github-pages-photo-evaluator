@@ -37,10 +37,7 @@
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html {
-    scroll-behavior: auto;
-    overscroll-behavior-y: none;
-  }
+  html { scroll-behavior: smooth; }
 
   body {
     font-family: 'Noto Sans JP', sans-serif;
@@ -49,15 +46,6 @@
     min-height: 100vh;
     line-height: 1.6;
     padding-bottom: env(safe-area-inset-bottom, 0);
-    overscroll-behavior-y: none;
-  }
-
-  button,
-  select,
-  input,
-  textarea,
-  a {
-    touch-action: manipulation;
   }
 
   /* ── ノイズテクスチャ背景 ── */
@@ -65,7 +53,6 @@
     content: '';
     position: fixed;
     inset: 0;
-    display: none;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
     pointer-events: none;
     z-index: 0;
@@ -77,6 +64,7 @@
     top: 0;
     z-index: 100;
     background: rgba(15,15,17,0.85);
+    backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     padding: 0 20px;
   }
@@ -112,7 +100,7 @@
     padding: 6px 14px;
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.15s, color 0.15s;
+    transition: all 0.15s;
     letter-spacing: 0.03em;
   }
   .tab-btn:hover { background: var(--surface2); color: var(--text); }
@@ -121,7 +109,21 @@
   /* ── レイアウト ── */
   .page { display: none; position: relative; z-index: 1; }
   .page.active { display: block; }
-  .container { max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
+  .container { max-width: 1320px; margin: 0 auto; padding: 28px 20px 48px; }
+  .lab-workspace {
+    display: grid;
+    grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  .lab-left,
+  .lab-right {
+    min-width: 0;
+  }
+  .lab-right {
+    position: sticky;
+    top: 76px;
+  }
 
   /* ── タイポ ── */
   .page-title {
@@ -164,7 +166,7 @@
     padding: 48px 24px;
     text-align: center;
     cursor: pointer;
-    transition: border-color 0.2s, background-color 0.2s, transform 0.2s;
+    transition: all 0.2s;
     background: var(--surface);
     position: relative;
     overflow: hidden;
@@ -200,7 +202,7 @@
   }
   #preview-img {
     width: 100%;
-    max-height: 320px;
+    max-height: 220px;
     object-fit: contain;
     display: block;
     background: #000;
@@ -229,79 +231,119 @@
     border-radius: 6px;
     cursor: pointer;
     font-family: inherit;
-    transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+    transition: all 0.15s;
     text-decoration: none;
   }
   .preview-change:hover, .btn-secondary:hover { border-color: var(--text-muted); color: var(--text); }
-
-  .upload-queue {
-    display: none;
-    margin-top: 16px;
+  .training-intro {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 14px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
   }
-  .upload-queue.active { display: block; }
-  .upload-queue-head {
+  .training-intro h2 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  .training-intro p {
+    color: var(--text-muted);
+    font-size: 0.86rem;
+    margin-bottom: 8px;
+  }
+  .training-list {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+  }
+  .queue-panel {
+    display: none;
+    margin-top: 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+  }
+  .queue-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
     margin-bottom: 12px;
     flex-wrap: wrap;
   }
-  .upload-queue-title {
-    font-size: 0.82rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-muted);
+  .queue-title {
+    font-size: 0.9rem;
     font-weight: 700;
   }
-  .upload-queue-note {
-    font-size: 0.76rem;
-    color: var(--text-dim);
+  .queue-sub {
+    font-size: 0.78rem;
+    color: var(--text-muted);
   }
-  .upload-queue-grid {
+  .queue-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 10px;
+    max-height: 220px;
+    overflow: auto;
   }
-  .upload-queue-item {
+  .queue-card {
     border: 1px solid var(--border);
-    border-radius: 14px;
-    background: var(--surface2);
+    border-radius: 12px;
     padding: 10px;
+    background: var(--surface2);
     cursor: pointer;
-    transition: all 0.15s ease;
   }
-  .upload-queue-item:hover {
-    border-color: var(--accent-border);
-    transform: translateY(-1px);
+  .queue-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-dim);
   }
-  .upload-queue-item.active {
-    border-color: var(--blue);
-    box-shadow: 0 10px 22px rgba(96,165,250,0.12);
+  .queue-card.saved {
+    border-color: rgba(74,222,128,0.35);
   }
-  .upload-queue-thumb {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: 10px;
-    background: linear-gradient(135deg, rgba(79,141,247,0.12), rgba(255,255,255,0.65));
-    display: block;
-    margin-bottom: 8px;
+  .queue-card.evaluated {
+    border-color: rgba(96,165,250,0.35);
   }
-  .upload-queue-name {
-    font-size: 0.74rem;
-    line-height: 1.45;
-    color: var(--text);
-    word-break: break-word;
-    margin-bottom: 4px;
+  .queue-file {
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    word-break: break-all;
   }
-  .upload-queue-status {
+  .queue-meta {
     font-size: 0.72rem;
     color: var(--text-muted);
+  }
+  .queue-status {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .queue-status.pending { background: rgba(251,191,36,0.15); color: var(--amber); }
+  .queue-status.evaluated { background: rgba(96,165,250,0.14); color: var(--blue); }
+  .queue-status.saved { background: rgba(74,222,128,0.16); color: var(--green); }
+  .queue-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .mode-switch-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 18px;
+  }
+  .mode-switch-note {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.7;
   }
 
   /* ── ボタン ── */
@@ -316,7 +358,7 @@
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    transition: all 0.2s;
     letter-spacing: 0.04em;
     margin-top: 16px;
   }
@@ -341,7 +383,7 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-label { color: var(--text-muted); font-size: 0.875rem; }
-  .loading-steps { display: none; }
+  .loading-steps { display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
   .loading-step {
     width: 6px; height: 6px;
     background: var(--border);
@@ -353,22 +395,6 @@
   @keyframes pulse-step {
     0%, 100% { background: var(--border); transform: scale(1); }
     50% { background: var(--accent); transform: scale(1.4); }
-  }
-  body.mobile-lite #loading {
-    padding: 28px 0;
-  }
-  body.mobile-lite .loader {
-    width: 34px;
-    height: 34px;
-    border-width: 2px;
-    margin-bottom: 10px;
-    animation-duration: 1.15s;
-  }
-  body.mobile-lite .loading-steps {
-    display: none;
-  }
-  body.mobile-lite .loading-label {
-    font-size: 0.82rem;
   }
 
   /* ── エラー ── */
@@ -384,7 +410,7 @@
   }
 
   /* ── 結果エリア ── */
-  #result-section { display: none; margin-top: 32px; }
+  #result-section { display: none; margin-top: 0; }
 
   .result-header {
     display: flex;
@@ -458,7 +484,7 @@
   /* 項目スコアグリッド */
   .scores-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     margin-bottom: 20px;
     animation: fadeUp 0.4s ease-out 0.1s both;
@@ -610,24 +636,23 @@
     font-size: 0.9rem;
     padding: 12px 13px;
     outline: none;
-    min-height: 48px;
   }
-  .feedback-field select {
-    -webkit-appearance: menulist;
-    appearance: auto;
-    background-image: none;
+  .feedback-field textarea {
+    min-height: 88px;
+    resize: vertical;
   }
   .visually-hidden-select {
     position: absolute;
     width: 1px;
     height: 1px;
-    margin: -1px;
     padding: 0;
-    border: 0;
+    margin: -1px;
     overflow: hidden;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
+    clip: rect(0, 0, 0, 0);
     white-space: nowrap;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
   }
   .segmented-control {
     display: flex;
@@ -635,26 +660,32 @@
     gap: 8px;
   }
   .segmented-btn {
-    min-height: 44px;
-    padding: 10px 14px;
-    border-radius: 999px;
+    appearance: none;
     border: 1px solid var(--border);
     background: var(--surface2);
     color: var(--text-muted);
+    border-radius: 999px;
+    padding: 10px 14px;
+    min-height: 42px;
     font-family: inherit;
-    font-size: 0.86rem;
+    font-size: 0.82rem;
     font-weight: 700;
+    line-height: 1;
     cursor: pointer;
-    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
   }
-  .segmented-btn.active {
+  .segmented-btn:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: rgba(96,165,250,0.08);
+  }
+  .segmented-btn.active,
+  .segmented-btn[aria-pressed="true"] {
     background: var(--blue);
     border-color: var(--blue);
-    color: #081018;
-  }
-  .feedback-field textarea {
-    min-height: 88px;
-    resize: vertical;
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(96,165,250,0.2);
   }
   .feedback-field select:focus,
   .feedback-field input:focus,
@@ -679,7 +710,7 @@
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
-    transition: background-color 0.15s, box-shadow 0.15s, transform 0.15s;
+    transition: all 0.15s;
   }
   .btn-feedback:hover {
     transform: translateY(-1px);
@@ -821,41 +852,31 @@
 
   #history-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
   }
   .history-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
-    display: grid;
-    grid-template-columns: 72px minmax(0, 1fr) 112px;
-    align-items: center;
-    column-gap: 14px;
-    padding: 12px;
     cursor: pointer;
-    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    transition: all 0.2s;
     animation: fadeUp 0.3s ease-out both;
-    content-visibility: auto;
-    contain: layout paint style;
-    contain-intrinsic-size: 112px;
   }
-  .history-card:hover { border-color: var(--accent-border); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.22); }
+  .history-card:hover { border-color: var(--accent-border); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
   .history-thumb {
-    width: 72px;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 4/3;
     overflow: hidden;
     background: var(--surface2);
     position: relative;
-    flex-shrink: 0;
-    border-radius: 10px;
   }
   .history-thumb img {
     width: 100%; height: 100%;
     object-fit: cover;
-    display: block;
+    transition: transform 0.3s;
   }
+  .history-card:hover .history-thumb img { transform: scale(1.04); }
   .history-score-badge {
     position: absolute;
     top: 8px; right: 8px;
@@ -864,18 +885,14 @@
     font-size: 0.75rem;
     font-weight: 700;
     font-family: 'DM Mono', monospace;
+    backdrop-filter: blur(8px);
   }
-  .history-info {
-    padding: 0;
-    display: flex;
-    align-items: center;
-    min-width: 0;
-  }
+  .history-info { padding: 12px; }
   .history-info-top {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
   }
   .history-score-big {
     font-family: 'DM Mono', monospace;
@@ -895,25 +912,18 @@
   }
   .history-card-footer {
     display: flex;
-    flex-direction: column;
     gap: 6px;
-    flex-shrink: 0;
-    width: 112px;
-    min-width: 112px;
   }
   .btn-detail, .btn-delete {
-    width: 100%;
-    min-width: 100%;
-    padding: 8px 12px;
+    flex: 1;
+    padding: 5px 0;
     border-radius: 6px;
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
     border: none;
-    transition: background-color 0.15s, color 0.15s;
-    min-height: 36px;
-    white-space: nowrap;
+    transition: all 0.15s;
   }
   .btn-detail { background: var(--surface2); color: var(--text-muted); }
   .btn-detail:hover { background: var(--accent); color: #0f0f11; }
@@ -934,6 +944,7 @@
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
     z-index: 200;
     overflow-y: auto;
     padding: 20px;
@@ -970,7 +981,7 @@
     padding: 4px;
     line-height: 1;
     border-radius: 6px;
-    transition: background-color 0.15s, color 0.15s;
+    transition: all 0.15s;
   }
   .modal-close:hover { background: var(--surface2); color: var(--text); }
   .modal-img { width: 100%; max-height: 300px; object-fit: contain; background: #000; display: block; }
@@ -989,69 +1000,10 @@
     .container { padding: 24px 16px 60px; }
     .preview-bar, .result-header { align-items: flex-start; }
     .ml-summary-grid, .feedback-grid { grid-template-columns: 1fr; }
-    .history-card {
-      grid-template-columns: 76px minmax(0, 1fr);
-      align-items: flex-start;
-    }
-    .history-thumb {
-      width: 76px;
-    }
-    .history-info {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 10px;
-    }
-    .history-card-footer {
-      grid-column: 1 / -1;
-      width: 100%;
-      flex-direction: row;
-      flex-wrap: wrap;
-    }
-    .btn-detail,
-    .btn-delete {
-      flex: 1 1 96px;
-      width: auto;
-    }
   }
   @media (max-width: 380px) {
     .scores-grid { grid-template-columns: 1fr; }
     #history-grid { grid-template-columns: 1fr; }
-  }
-
-  @media (hover: none), (pointer: coarse) {
-    body::before {
-      display: none;
-    }
-    nav {
-      background: rgba(15,15,17,0.96);
-    }
-    #modal-overlay {
-      backdrop-filter: none;
-    }
-    .history-card:hover,
-    .btn-primary:hover:not(:disabled),
-    .btn-feedback:hover,
-    .btn-detail:hover,
-    .btn-delete:hover,
-    .preview-change:hover,
-    .btn-secondary:hover,
-    .tab-btn:hover,
-    #dropzone:hover {
-      transform: none;
-      box-shadow: none;
-    }
-    .history-card,
-    .btn-primary,
-    .btn-feedback,
-    .tab-btn,
-    .preview-change,
-    .btn-secondary,
-    .btn-detail,
-    .btn-delete,
-    .modal-close,
-    #dropzone {
-      transition-duration: 0.01ms;
-    }
   }
 
   /* ── General User Redesign Overrides ── */
@@ -1206,6 +1158,25 @@
     font-size: 0.84rem;
     line-height: 1.7;
   }
+  .mini-info-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .mini-info-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(219,230,244,0.95);
+    border-radius: 999px;
+    color: #5f7390;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
   .launch-warning {
     background: #fff4f6;
     border-color: #f5c8d0;
@@ -1447,6 +1418,7 @@
 
   #modal-overlay {
     background: rgba(46, 76, 114, 0.16);
+    backdrop-filter: blur(10px);
   }
   .modal-close:hover {
     background: #edf5ff;
@@ -1454,6 +1426,12 @@
   }
 
   @media (max-width: 760px) {
+    .lab-workspace {
+      grid-template-columns: 1fr;
+    }
+    .lab-right {
+      position: static;
+    }
     .nav-inner {
       height: auto;
       padding: 14px 0;
@@ -1477,11 +1455,249 @@
     .container {
       padding: 24px 16px 72px;
     }
+    .scores-grid {
+      grid-template-columns: 1fr;
+    }
     .page-title {
       font-size: 2rem;
     }
     .total-card {
       text-align: center;
+    }
+  }
+
+  .review-page-head {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .review-page-head p {
+    margin: 0;
+    color: var(--text-muted);
+  }
+  .review-toolbar {
+    display: grid;
+    grid-template-columns: 1.2fr minmax(180px, 220px) minmax(180px, 220px) auto;
+    gap: 12px;
+    align-items: end;
+    padding: 18px;
+    margin-bottom: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .review-field {
+    display: grid;
+    gap: 6px;
+  }
+  .review-field label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .review-field input,
+  .review-field select {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font: inherit;
+  }
+  .review-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .review-summary-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 16px 18px;
+  }
+  .review-summary-label {
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .review-summary-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+  }
+  .review-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .review-chip {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .review-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0f0f11;
+  }
+  .review-status-line {
+    min-height: 24px;
+    margin-bottom: 16px;
+    color: var(--text-muted);
+  }
+  .review-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .review-card {
+    display: grid;
+    gap: 14px;
+    padding: 14px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .review-thumb {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: linear-gradient(135deg, rgba(96,165,250,0.12), rgba(255,255,255,0.02));
+  }
+  .review-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .review-thumb.empty {
+    padding: 20px;
+    color: var(--text-muted);
+    text-align: center;
+    font-size: 0.92rem;
+  }
+  .review-meta {
+    display: grid;
+    gap: 8px;
+  }
+  .review-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 12px;
+  }
+  .review-title {
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .review-score {
+    white-space: nowrap;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .review-sub {
+    color: var(--text-muted);
+    font-size: 0.84rem;
+  }
+  .review-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .review-tag {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    background: var(--surface2);
+    color: #afbdd0;
+  }
+  .review-tag.ok {
+    background: var(--green-dim);
+    color: var(--green);
+  }
+  .review-tag.warn {
+    background: var(--amber-dim);
+    color: var(--amber);
+  }
+  .review-tag.danger {
+    background: var(--red-dim);
+    color: var(--red);
+  }
+  .review-actions,
+  .review-state-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .review-link-btn,
+  .review-state-btn {
+    flex: 1 1 120px;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .review-state-btn[data-state="reviewed"] {
+    background: var(--green-dim);
+    color: var(--green);
+    border-color: rgba(74, 222, 128, 0.18);
+  }
+  .review-state-btn[data-state="flagged"] {
+    background: var(--amber-dim);
+    color: var(--amber);
+    border-color: rgba(251, 191, 36, 0.18);
+  }
+  .review-state-btn[data-state="excluded"] {
+    background: var(--red-dim);
+    color: var(--red);
+    border-color: rgba(248, 113, 113, 0.18);
+  }
+  .review-empty {
+    margin-top: 16px;
+    padding: 34px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    text-align: center;
+    color: var(--text-muted);
+  }
+  @media (max-width: 960px) {
+    .review-toolbar,
+    .review-summary {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .review-toolbar,
+    .review-summary {
+      grid-template-columns: 1fr;
     }
   }
 </style>
@@ -1491,10 +1707,11 @@
 <!-- ナビ -->
 <nav>
   <div class="nav-inner">
-    <div class="nav-logo">📸 <span>PHOTO</span>EVAL</div>
+    <div class="nav-logo">🧪 <span>PHOTO</span>TRAINING</div>
     <div class="nav-tabs">
-      <button class="tab-btn active" onclick="showPage('evaluate')">写真をみる</button>
-      <button class="tab-btn" onclick="showPage('history')">履歴</button>
+      <button class="tab-btn active" data-page="evaluate" onclick="showPage('evaluate')">学習入力</button>
+      <button class="tab-btn" data-page="history" onclick="showPage('history')">保存履歴</button>
+      <button class="tab-btn" data-page="review" onclick="showPage('review')">レビュー管理</button>
     </div>
   </div>
 </nav>
@@ -1502,92 +1719,103 @@
 <!-- 評価ページ -->
 <div id="page-evaluate" class="page active">
   <div class="container">
-    <h1 class="page-title">写真チェックアプリ</h1>
-    <p class="page-sub">写真を選ぶだけで、構図・光・色・技術・主題性・印象を分かりやすくチェックできます。</p>
-    <p class="page-sub note">JPG・JPEG・PNG・WebP・HEIFに対応しています。HEIFはお使いのブラウザによっては表示や確認ができない場合があります。</p>
+    <h1 class="page-title">開発者向け 学習データ作成ラボ</h1>
+    <p class="page-sub">公開版とは分離した、学習用データ作成専用の写真評価アプリです。複数写真をキューに積み、補正点付きで順番に保存できます。</p>
+    <p class="page-sub note">ローカルMLサーバー接続前提です。JPG・JPEG・PNG・WebP・HEIFに対応しています。</p>
 
     <div id="launch-warning" class="launch-warning"></div>
 
     <input id="webhook-url" type="hidden" value="https://script.google.com/macros/s/AKfycbwJM6moHlemxgjr4yLo_HOu8fgT0sdSbgy-QUBemlmMPp297Ok9UrASZ8qzFUY-0AACGQ/exec">
 
-    <section class="welcome-panel">
-      <div class="step-grid">
-        <article class="step-card">
-          <span class="step-num">1</span>
-          <h3>画像を選ぶ</h3>
-          <p>スマホやパソコンにある写真を1枚選ぶだけです。対応形式ならそのままプレビューできます。</p>
-        </article>
-        <article class="step-card">
-          <span class="step-num">2</span>
-          <h3>チェックする</h3>
-          <p>構図や光のバランスなどを自動で確認して、総合点と項目ごとの見やすい結果を表示します。</p>
-        </article>
-        <article class="step-card">
-          <span class="step-num">3</span>
-          <h3>結果を見る</h3>
-          <p>結果を見て、気になる点を確認できます。</p>
-        </article>
-      </div>
+    <section class="training-intro">
+      <h2>このラボの役割</h2>
+      <p>大量の写真を開発者が投入し、補正点と種別を付けて学習データを作るための専用画面です。</p>
+      <ul class="training-list">
+        <li>複数画像を一度に読み込み、キューで順番に処理します。</li>
+        <li>公開向けの簡易フィードバックではなく、学習に使う補正点を直接保存します。</li>
+        <li>保存先はローカルの `photo_eval_ml.sqlite3` で、公開 collector には送りません。</li>
+      </ul>
     </section>
 
-    <!-- ドロップゾーン -->
-    <div id="dropzone" onclick="document.getElementById('file-input').click()">
-      <input type="file" id="file-input" multiple accept="image/jpeg,image/jpg,image/png,image/webp,image/heif,image/heic,.jpg,.jpeg,.png,.webp,.heif,.heic">
-      <span class="drop-icon">📷</span>
-      <p class="drop-title">ここをタップして写真を選ぶ</p>
-      <p class="drop-sub">ドラッグ＆ドロップにも対応しています ／ JPG・JPEG・PNG・WebP・HEIF ／ 1枚最大25MB ／ 5枚まで</p>
+    <div class="mode-switch-card">
+      <div class="section-head" style="margin-bottom:8px;">
+        <p class="section-title">入力モード</p>
+      </div>
+      <div class="segmented-control" role="group" aria-label="入力モード">
+        <button type="button" class="segmented-btn active" id="mode-developer-training" aria-pressed="true" onclick="setWorkflowMode('developer-training', event)">学習データ作成</button>
+        <button type="button" class="segmented-btn" id="mode-user-recheck" aria-pressed="false" onclick="setWorkflowMode('user-recheck', event)">ユーザー写真を再評価</button>
+      </div>
+      <p class="mode-switch-note" id="workflow-mode-note">通常の学習データ作成モードです。開発者が写真を投入し、補正点と種別を付けて保存します。</p>
     </div>
 
-    <!-- プレビュー -->
-    <div id="preview-wrap">
-      <img id="preview-img" src="" alt="プレビュー">
-      <div class="preview-bar">
-        <span class="preview-name" id="preview-name">—</span>
-        <div class="preview-actions">
-          <a class="btn-secondary" id="download-current-photo" href="#" download>写真を保存</a>
-          <button class="preview-change" onclick="resetFile()">選び直す</button>
+    <div class="lab-workspace">
+      <div class="lab-left">
+        <!-- ドロップゾーン -->
+        <div id="dropzone" onclick="document.getElementById('file-input').click()">
+          <input type="file" id="file-input" multiple accept="image/jpeg,image/jpg,image/png,image/webp,image/heif,image/heic,.jpg,.jpeg,.png,.webp,.heif,.heic">
+          <span class="drop-icon">📷</span>
+          <p class="drop-title">ここをタップして学習用写真を追加</p>
+          <p class="drop-sub">複数選択・ドラッグ＆ドロップ対応 ／ JPG・JPEG・PNG・WebP・HEIF ／ 1枚最大25MB</p>
+        </div>
+
+        <!-- プレビュー -->
+        <div id="preview-wrap">
+          <img id="preview-img" src="" alt="プレビュー">
+          <div class="preview-bar">
+            <span class="preview-name" id="preview-name">—</span>
+            <div class="preview-actions">
+              <a class="btn-secondary" id="download-current-photo" href="#" download>写真を保存</a>
+              <button class="preview-change" onclick="removeCurrentFromQueue()">この写真を外す</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="queue-panel" class="queue-panel">
+          <div class="queue-head">
+            <div>
+              <p class="queue-title">投入キュー</p>
+              <p class="queue-sub" id="queue-summary">0枚</p>
+            </div>
+            <div class="queue-actions">
+              <button class="btn-secondary" onclick="document.getElementById('file-input').click()">追加する</button>
+              <button class="btn-secondary" onclick="clearTrainingQueue()">キューを空にする</button>
+            </div>
+          </div>
+          <div id="queue-list" class="queue-list"></div>
+        </div>
+
+        <div id="side-ml-summary"></div>
+
+        <div id="error-box"></div>
+
+        <button class="btn-primary" id="eval-btn" disabled onclick="runEvaluation()">
+          ✦ 現在の写真を採点する
+        </button>
+
+        <div id="loading">
+          <div class="loader"></div>
+          <p class="loading-label" id="loading-label">写真を確認しています...</p>
+          <div class="loading-steps">
+            <div class="loading-step"></div>
+            <div class="loading-step"></div>
+            <div class="loading-step"></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="upload-queue" id="upload-queue">
-      <div class="upload-queue-head">
-        <div>
-          <p class="upload-queue-title">写真一覧</p>
-          <p class="upload-queue-note" id="upload-queue-note">一覧から1枚選んで評価します</p>
+      <div class="lab-right">
+        <!-- 結果 -->
+        <div id="result-section">
+          <div class="result-header">
+            <p class="result-title">✦ 学習用チェック結果</p>
+            <div class="result-actions">
+              <a class="btn-secondary" id="download-result-photo" href="#" download>画像を保存</a>
+              <button class="btn-reset" onclick="goToNextQueueItem()">次の写真へ</button>
+            </div>
+          </div>
+          <div id="result-inner"></div>
         </div>
       </div>
-      <div class="upload-queue-grid" id="upload-queue-grid"></div>
-    </div>
-
-    <div id="error-box"></div>
-
-    <!-- 評価ボタン -->
-    <button class="btn-primary" id="eval-btn" disabled onclick="runEvaluation()">
-      ✦ 写真をチェックする
-    </button>
-
-    <!-- ローディング -->
-    <div id="loading">
-      <div class="loader"></div>
-      <p class="loading-label" id="loading-label">写真を確認しています...</p>
-      <div class="loading-steps">
-        <div class="loading-step"></div>
-        <div class="loading-step"></div>
-        <div class="loading-step"></div>
-      </div>
-    </div>
-
-    <!-- 結果 -->
-    <div id="result-section">
-      <div class="result-header">
-        <p class="result-title">✦ チェック結果</p>
-        <div class="result-actions">
-          <a class="btn-secondary" id="download-result-photo" href="#" download>画像を保存</a>
-          <button class="btn-reset" onclick="resetAll()">別の写真をみる</button>
-        </div>
-      </div>
-      <div id="result-inner"></div>
     </div>
   </div>
 </div>
@@ -1595,8 +1823,8 @@
 <!-- 履歴ページ -->
 <div id="page-history" class="page">
   <div class="container">
-    <h1 class="page-title">チェック履歴</h1>
-    <p class="page-sub">これまでにチェックした写真を、点数や日時とあわせて一覧で確認できます。</p>
+    <h1 class="page-title">学習保存履歴</h1>
+    <p class="page-sub">ローカルに保存した学習用レコードを、点数や日時とあわせて一覧で確認できます。</p>
 
     <div class="history-toolbar">
       <span class="history-count" id="history-count">0件</span>
@@ -1612,6 +1840,67 @@
       <div class="empty-icon">📭</div>
       <p class="empty-text">まだチェック結果がありません<br>写真をアップロードして最初のチェックをしてみましょう</p>
     </div>
+  </div>
+</div>
+
+<!-- レビュー管理ページ -->
+<div id="page-review" class="page">
+  <div class="container">
+    <section class="review-page-head">
+      <h1 class="page-title">開発者レビュー管理</h1>
+      <p>公開フィードバックとローカル学習DBをまとめて見比べ、Google Drive 上の画像とあわせて確認できます。</p>
+    </section>
+
+    <section class="review-toolbar">
+      <div class="review-field">
+        <label for="review-collector-url">公開フィードバック Export URL</label>
+        <input id="review-collector-url" type="url">
+      </div>
+      <div class="review-field">
+        <label for="review-source-mode">読み込み元</label>
+        <select id="review-source-mode">
+          <option value="public">公開フィードバック</option>
+          <option value="local">ローカル学習DB</option>
+        </select>
+      </div>
+      <div class="review-field">
+        <label for="review-search-input">検索</label>
+        <input id="review-search-input" type="search" placeholder="画像ID / ファイル名 / 種類">
+      </div>
+      <button class="btn-primary" id="review-refresh-btn" type="button">更新する</button>
+    </section>
+
+    <section class="review-summary">
+      <article class="review-summary-card">
+        <div class="review-summary-label">読み込み件数</div>
+        <div class="review-summary-value" id="review-count-total">0</div>
+      </article>
+      <article class="review-summary-card">
+        <div class="review-summary-label">画像リンクあり</div>
+        <div class="review-summary-value" id="review-count-assets">0</div>
+      </article>
+      <article class="review-summary-card">
+        <div class="review-summary-label">未確認</div>
+        <div class="review-summary-value" id="review-count-pending">0</div>
+      </article>
+      <article class="review-summary-card">
+        <div class="review-summary-label">確認済み</div>
+        <div class="review-summary-value" id="review-count-reviewed">0</div>
+      </article>
+    </section>
+
+    <section class="review-filters" id="review-status-filters">
+      <button type="button" class="review-chip active" data-review-filter="all">すべて</button>
+      <button type="button" class="review-chip" data-review-filter="pending">未確認</button>
+      <button type="button" class="review-chip" data-review-filter="reviewed">確認済み</button>
+      <button type="button" class="review-chip" data-review-filter="flagged">要確認</button>
+      <button type="button" class="review-chip" data-review-filter="excluded">除外</button>
+      <button type="button" class="review-chip" data-review-filter="with-image">画像リンクあり</button>
+    </section>
+
+    <div class="review-status-line" id="review-status-line"></div>
+    <section class="review-grid" id="review-records-grid"></section>
+    <div class="review-empty" id="review-empty-state" hidden>表示できるレコードがありません。</div>
   </div>
 </div>
 
@@ -1706,19 +1995,17 @@ const FEEDBACK_GENRE_ALIAS = {
   その他: 'other',
 };
 const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwJM6moHlemxgjr4yLo_HOu8fgT0sdSbgy-QUBemlmMPp297Ok9UrASZ8qzFUY-0AACGQ/exec';
-const DEFAULT_ML_API_BASE = 'http://127.0.0.1:8787';
+const DEFAULT_ML_API_BASE = 'http://127.0.0.1:8788';
 const DEFAULT_PUBLIC_FEEDBACK_COLLECTOR_URL = 'https://script.google.com/macros/s/AKfycbyT_-5dbbSbPeWu7nKDG7JWN-lzx_PgXbY-7NWy0GlelRRDrec3WUWcF49_txNrqR9B/exec';
-const DEFAULT_REVIEW_MODE = 'general';
+const DEFAULT_PUBLIC_FEEDBACK_EXPORT_URL = `${DEFAULT_PUBLIC_FEEDBACK_COLLECTOR_URL}?action=export`;
+const REVIEW_STATE_STORAGE_KEY = 'photo_eval_developer_review_status_v1';
 
 const DB_NAME = 'photo_eval_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'history';
 const MAX_HISTORY_ITEMS = 100;
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
-const MAX_BATCH_UPLOADS = 5;
 const DELIVERY_MAX_SIDE = 1920;
-const ANALYSIS_MAX_SIDE_DESKTOP = 640;
-const ANALYSIS_MAX_SIDE_MOBILE = 384;
 const BROWSER_ML_MODEL_PATH = './photo_eval_model.json';
 
 let currentFile = null;
@@ -1727,16 +2014,21 @@ let currentFileDataUrl = '';
 let latestResultRecord = null;
 let sendingRecordId = null;
 let modalRecordId = null;
-let uploadQueue = [];
-let currentUploadId = null;
-let currentBatchId = '';
+let trainingQueue = [];
+let currentQueueIndex = -1;
+let reviewWorkflowMode = 'developer-training';
+let reviewRecords = [];
+let activeReviewFilter = 'all';
+let reviewRecordsLoaded = false;
 let browserMlModelPromise = null;
 let mlRuntimeState = {
   mode: 'Rule-based',
   modelVersion: '',
   available: false,
   sampleCount: 0,
+  feedbackCount: 0,
   minimumMlSamples: 30,
+  recommendedMlSamples: 100,
   reason: 'AI補正は利用できません',
 };
 
@@ -1747,39 +2039,6 @@ function clamp(value, min, max) {
 function round(value, digits = 0) {
   const scale = 10 ** digits;
   return Math.round(value * scale) / scale;
-}
-
-function isMobileLikeDevice() {
-  const userAgent = navigator.userAgent || '';
-  return /iPhone|iPad|iPod|Android/i.test(userAgent) || window.innerWidth <= 820;
-}
-
-function setupPullToRefreshGuard() {
-  if (!/iPhone|iPad|iPod/i.test(navigator.userAgent || '')) return;
-  let touchStartY = 0;
-  let canGuardRefresh = false;
-
-  document.addEventListener('touchstart', event => {
-    if (!event.touches || event.touches.length !== 1) return;
-    touchStartY = event.touches[0].clientY;
-    canGuardRefresh = window.scrollY <= 0;
-  }, { passive: true });
-
-  document.addEventListener('touchmove', event => {
-    if (!canGuardRefresh || !event.touches || event.touches.length !== 1) return;
-    const deltaY = event.touches[0].clientY - touchStartY;
-    if (deltaY > 8 && window.scrollY <= 0) {
-      event.preventDefault();
-    }
-  }, { passive: false });
-}
-
-function getAnalysisMaxSide() {
-  return isMobileLikeDevice() ? ANALYSIS_MAX_SIDE_MOBILE : ANALYSIS_MAX_SIDE_DESKTOP;
-}
-
-function getQueueThumbnailMaxSide() {
-  return isMobileLikeDevice() ? 240 : 360;
 }
 
 function normalize(value, min, max) {
@@ -1811,6 +2070,22 @@ function formatDate(iso) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function normalizeScore(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.round(num) : '—';
+}
+
+function normalizeHttpUrl(value, fallback = '') {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+  try {
+    const normalized = new URL(raw).toString();
+    return /^https?:\/\//.test(normalized) ? normalized.replace(/\/$/, '') : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function getFileExtension(name = '') {
@@ -1851,6 +2126,37 @@ function getTier(score) {
 
 function pick(list, seed) {
   return list[Math.abs(seed) % list.length];
+}
+
+function getWorkflowModeMeta(mode = reviewWorkflowMode) {
+  if (mode === 'user-recheck') {
+    return {
+      note: 'ユーザーがアップロードした写真を、開発者が再評価するモードです。補正点や種別を付けて、再評価データとして保存します。',
+      saveLabel: 'この写真を再評価保存',
+      saveAndNextLabel: '再評価保存して次へ',
+      source: 'user-photo-recheck',
+    };
+  }
+  return {
+    note: '通常の学習データ作成モードです。開発者が写真を投入し、補正点と種別を付けて保存します。',
+    saveLabel: 'この写真を学習保存',
+    saveAndNextLabel: '保存して次へ',
+    source: 'developer-training-lab',
+  };
+}
+
+function setWorkflowMode(mode, event = null) {
+  reviewWorkflowMode = mode;
+  document.querySelectorAll('[id^="mode-"]').forEach(button => {
+    const active = button.id === `mode-${mode}`;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+  const meta = getWorkflowModeMeta(mode);
+  const note = document.getElementById('workflow-mode-note');
+  if (note) note.textContent = meta.note;
+  if (latestResultRecord) renderCurrentRecord(latestResultRecord);
+  if (event) event.stopPropagation();
 }
 
 function getDeliveryStatus(record) {
@@ -1914,10 +2220,11 @@ function validateDeliverySettings(settings) {
 function getMlApiBase() {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.mlApiBase);
-    if (stored) return stored;
+    const normalizedStored = normalizeHttpUrl(stored);
+    if (normalizedStored) return normalizedStored;
   } catch {}
   if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-    return window.location.origin;
+    return normalizeHttpUrl(window.location.origin, DEFAULT_ML_API_BASE);
   }
   return DEFAULT_ML_API_BASE;
 }
@@ -1997,13 +2304,16 @@ async function loadBrowserMlModel() {
 function buildMlStatusFromModel(model) {
   const sampleCount = Number(model?.sample_count || 0);
   const minimumMlSamples = Number(model?.minimum_ml_samples || 30);
+  const recommendedMlSamples = Number(model?.recommended_ml_samples || 100);
   const available = sampleCount >= minimumMlSamples;
   return {
     mode: available ? 'ML-assisted' : 'Rule-based',
     modelVersion: model?.model_version || '',
     available,
     sampleCount,
+    feedbackCount: sampleCount,
     minimumMlSamples,
+    recommendedMlSamples,
     reason: available ? '' : `学習データ数が${minimumMlSamples}件に達していないため Rule-based にフォールバックしています`,
   };
 }
@@ -2089,7 +2399,9 @@ async function refreshMlStatus() {
         modelVersion: '',
         available: false,
         sampleCount: 0,
+        feedbackCount: 0,
         minimumMlSamples: 30,
+        recommendedMlSamples: 100,
         reason: '学習済みモデルを読み込めません',
       });
     }
@@ -2103,7 +2415,9 @@ async function refreshMlStatus() {
       modelVersion: status.modelVersion || '',
       available: Boolean(status.available),
       sampleCount: Number(status.sampleCount || 0),
+      feedbackCount: Number(status.feedbackCount || 0),
       minimumMlSamples: Number(status.minimumMlSamples || 30),
+      recommendedMlSamples: Number(status.recommendedMlSamples || 100),
       reason: status.reason || '',
     });
   } catch (error) {
@@ -2113,7 +2427,9 @@ async function refreshMlStatus() {
       modelVersion: '',
       available: false,
       sampleCount: 0,
+      feedbackCount: 0,
       minimumMlSamples: 30,
+      recommendedMlSamples: 100,
       reason: 'AI補正は利用できません',
     });
   }
@@ -2126,16 +2442,15 @@ function updateLaunchWarning() {
   const host = window.location.hostname;
   const isFile = protocol === 'file:';
   const isLocalServer = protocol === 'http:' && (host === '127.0.0.1' || host === 'localhost');
-  const isHostedHttps = protocol === 'https:';
 
   if (isFile) {
     warningEl.classList.add('active');
-    warningEl.textContent = 'このページはファイルを直接開かず、公開URLまたは起動用の方法から使ってください。PCはローカル起動、iPhoneは公開URLから開くと安心です。';
+    warningEl.textContent = 'このラボは file:// 直開きではなく、ローカルMLサーバーから起動してください。';
     return;
   }
-  if (!isLocalServer && !isHostedHttps) {
+  if (!isLocalServer) {
     warningEl.classList.add('active');
-    warningEl.textContent = 'このページは、PCではローカル起動、iPhoneでは公開URLから開いてください。公開URLは https ではじまるアドレスです。';
+    warningEl.textContent = 'このラボは開発者向けのため、http://127.0.0.1:8787/ などローカルサーバー上でのみ利用してください。';
     return;
   }
   warningEl.classList.remove('active');
@@ -2143,114 +2458,142 @@ function updateLaunchWarning() {
 }
 
 function revokeCurrentFileUrl() {
-  currentFileUrl = '';
-}
-
-function createUploadId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function getActiveUpload() {
-  return uploadQueue.find(item => item.id === currentUploadId) || null;
-}
-
-function getUploadStatusLabel(item) {
-  if (item.status === 'saved') return '保存済み';
-  if (item.status === 'evaluated') return '評価済み';
-  return '未評価';
-}
-
-async function buildQueueThumbnail(file) {
-  const image = await loadImageElement(file);
-  const canvas = document.createElement('canvas');
-  const maxSide = getQueueThumbnailMaxSide();
-  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
-  canvas.width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
-  canvas.height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
-  const ctx = canvas.getContext('2d', { alpha: false });
-  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.94);
-}
-
-async function moveToNextUploadAfterFeedback() {
-  const currentIndex = uploadQueue.findIndex(item => item.id === currentUploadId);
-  if (currentIndex < 0) return false;
-
-  const nextUpload = uploadQueue.slice(currentIndex + 1).find(item => item.status !== 'saved');
-  if (!nextUpload) return false;
-
-  await selectUploadItem(nextUpload.id);
-  if (!nextUpload.evaluationResult) {
-    await runEvaluation();
+  if (currentFileUrl) {
+    URL.revokeObjectURL(currentFileUrl);
+    currentFileUrl = '';
   }
-  return true;
 }
 
-function renderUploadQueue() {
-  const wrap = document.getElementById('upload-queue');
-  const grid = document.getElementById('upload-queue-grid');
-  const note = document.getElementById('upload-queue-note');
-  if (!wrap || !grid || !note) return;
+function getQueueStatusLabel(status) {
+  if (status === 'saved') return '学習保存済み';
+  if (status === 'evaluated') return '採点済み';
+  return '未処理';
+}
 
-  if (!uploadQueue.length) {
-    wrap.classList.remove('active');
-    grid.innerHTML = '';
-    note.textContent = '一覧から1枚選んで評価します';
+function renderQueue() {
+  const panel = document.getElementById('queue-panel');
+  const list = document.getElementById('queue-list');
+  const summary = document.getElementById('queue-summary');
+  if (!panel || !list || !summary) return;
+
+  if (!trainingQueue.length) {
+    panel.style.display = 'none';
+    list.innerHTML = '';
+    summary.textContent = '0枚';
     return;
   }
 
-  wrap.classList.add('active');
-  note.textContent = `${uploadQueue.length}枚まで保持できます。一覧から1枚選んで評価・保存します。`;
-  grid.innerHTML = uploadQueue.map(item => `
-    <button type="button" class="upload-queue-item ${item.id === currentUploadId ? 'active' : ''}" onclick="selectUploadItem('${escapeHtml(item.id)}')">
-      <img class="upload-queue-thumb" src="${item.thumbUrl || item.previewUrl}" alt="${escapeHtml(item.file.name)}" loading="lazy" decoding="async">
-      <div class="upload-queue-name">${escapeHtml(item.file.name)}</div>
-      <div class="upload-queue-status">${escapeHtml(getUploadStatusLabel(item))}</div>
-    </button>
+  panel.style.display = 'block';
+  const savedCount = trainingQueue.filter(item => item.status === 'saved').length;
+  const evaluatedCount = trainingQueue.filter(item => item.status === 'evaluated').length;
+  summary.textContent = `${trainingQueue.length}枚 / 採点済み ${evaluatedCount} / 保存済み ${savedCount}`;
+  list.innerHTML = trainingQueue.map((item, index) => `
+    <article class="queue-card ${index === currentQueueIndex ? 'active' : ''} ${item.status}" onclick="selectQueueItem(${index})">
+      <div class="queue-file">${escapeHtml(item.file.name)}</div>
+      <div class="queue-meta">${Math.round(item.file.size / 1024)}KB</div>
+      <span class="queue-status ${item.status}">${escapeHtml(getQueueStatusLabel(item.status))}</span>
+    </article>
   `).join('');
 }
 
-function applyFeedbackDraftToForm(draft = {}) {
-  const fairness = document.getElementById('feedback-fairness');
-  if (fairness) fairness.value = draft.fairness || '';
-  const genre = document.getElementById('feedback-genre');
-  if (genre) genre.value = draft.genre || '';
-  syncFeedbackGenreButtons();
-}
-
-function persistCurrentFeedbackDraft() {
-  const activeUpload = getActiveUpload();
-  if (!activeUpload || !latestResultRecord || activeUpload.recordId !== latestResultRecord.id) return;
-  activeUpload.feedbackDraft = collectFeedbackFormValues();
-}
-
-async function selectUploadItem(uploadId) {
-  persistCurrentFeedbackDraft();
-  const upload = uploadQueue.find(item => item.id === uploadId);
-  if (!upload) return;
-
-  currentUploadId = upload.id;
-  currentFile = upload.file;
-  currentFileUrl = upload.previewUrl;
-  currentFileDataUrl = upload.dataUrl || '';
-  document.getElementById('preview-img').src = upload.dataUrl || upload.previewUrl;
-  document.getElementById('preview-name').textContent = upload.file.name;
-  document.getElementById('dropzone').style.display = 'none';
-  document.getElementById('preview-wrap').style.display = 'none';
-  document.getElementById('eval-btn').disabled = false;
-
-  if (upload.evaluationResult) {
-    latestResultRecord = upload.evaluationResult;
-    renderCurrentRecord(upload.evaluationResult);
-    if (upload.feedbackDraft) applyFeedbackDraftToForm(upload.feedbackDraft);
-  } else {
+async function syncCurrentFileView() {
+  const item = trainingQueue[currentQueueIndex];
+  if (!item) {
+    currentFile = null;
+    currentFileDataUrl = '';
     latestResultRecord = null;
+    revokeCurrentFileUrl();
+    document.getElementById('preview-img').src = '';
+    document.getElementById('preview-name').textContent = '—';
+    document.getElementById('dropzone').style.display = '';
+    document.getElementById('preview-wrap').style.display = 'none';
+    document.getElementById('eval-btn').disabled = true;
     document.getElementById('result-section').style.display = 'none';
+    document.getElementById('side-ml-summary').innerHTML = '';
+    updateActionLinks();
+    renderQueue();
+    return;
   }
 
-  renderUploadQueue();
-  updateActionLinks(upload.evaluationResult || null);
+  currentFile = item.file;
+  currentFileDataUrl = item.dataUrl;
+  latestResultRecord = null;
+  revokeCurrentFileUrl();
+  currentFileUrl = URL.createObjectURL(item.file);
+  document.getElementById('preview-img').src = item.dataUrl;
+  document.getElementById('preview-name').textContent = item.file.name;
+  document.getElementById('dropzone').style.display = 'none';
+  document.getElementById('preview-wrap').style.display = 'block';
+  document.getElementById('eval-btn').disabled = false;
+  updateActionLinks();
+
+  if (item.recordId) {
+    const record = await getRecordById(item.recordId);
+    if (record) {
+      renderCurrentRecord(record);
+    } else {
+      document.getElementById('result-section').style.display = 'none';
+      document.getElementById('side-ml-summary').innerHTML = '';
+    }
+  } else {
+    document.getElementById('result-section').style.display = 'none';
+    document.getElementById('side-ml-summary').innerHTML = '';
+  }
+  renderQueue();
+}
+
+async function selectQueueItem(index) {
+  currentQueueIndex = index;
+  await syncCurrentFileView();
+}
+
+async function autoEvaluateCurrentQueueItem() {
+  const item = trainingQueue[currentQueueIndex];
+  if (!item || item.status !== 'pending' || !currentFile) return;
+  await runEvaluation();
+}
+
+async function addFilesToQueue(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heif', 'image/heic'];
+  const allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'heif', 'heic'];
+  const accepted = [];
+
+  for (const file of files) {
+    const extension = getFileExtension(file.name);
+    if (!allowedTypes.includes(file.type) && !allowedExts.includes(extension)) continue;
+    if (file.size > MAX_UPLOAD_BYTES) continue;
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      accepted.push({
+        id: Date.now() + Math.random(),
+        file,
+        dataUrl,
+        status: 'pending',
+        recordId: null,
+      });
+    } catch (error) {
+      console.warn('Failed to read file', file.name, error);
+    }
+  }
+
+  if (!accepted.length) {
+    showError('追加できる画像がありませんでした。対応形式とサイズを確認してください');
+    return;
+  }
+
+  trainingQueue = trainingQueue.concat(accepted);
   hideError();
+  const shouldAutoEvaluateFirst = currentQueueIndex < 0;
+  if (currentQueueIndex < 0) {
+    currentQueueIndex = 0;
+  }
+  await syncCurrentFileView();
+  if (shouldAutoEvaluateFirst) {
+    await autoEvaluateCurrentQueueItem();
+  }
 }
 
 function updateActionLinks(record = null) {
@@ -2278,17 +2621,36 @@ function updateActionLinks(record = null) {
   setLinkState(modalLink, Boolean(record?.imageSrc), record?.imageSrc || '', record?.fileName || '');
 }
 
-function showPage(name) {
+function getInitialPageName() {
+  const page = window.location.hash.replace('#', '');
+  return ['evaluate', 'history', 'review'].includes(page) ? page : 'evaluate';
+}
+
+function showPage(name, options = {}) {
+  const { updateHash = true } = options;
   document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(button => button.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(button => {
+    button.classList.toggle('active', button.dataset.page === name);
+  });
   document.getElementById(`page-${name}`).classList.add('active');
-  document.querySelectorAll('.tab-btn')[name === 'evaluate' ? 0 : 1].classList.add('active');
-  if (name === 'history') void renderHistory();
+
+  if (updateHash) {
+    const nextUrl = name === 'evaluate'
+      ? `${window.location.pathname}${window.location.search}`
+      : `${window.location.pathname}${window.location.search}#${name}`;
+    window.history.replaceState(null, '', nextUrl);
+  }
+
+  if (name === 'history') {
+    void renderHistory();
+  }
+  if (name === 'review' && !reviewRecordsLoaded) {
+    void loadReviewRecords();
+  }
 }
 
 document.getElementById('file-input').addEventListener('change', event => {
-  const files = Array.from(event.target.files || []);
-  if (files.length) void setFiles(files);
+  if (event.target.files?.length) void addFilesToQueue(event.target.files);
   event.target.value = '';
 });
 
@@ -2306,94 +2668,79 @@ dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-ove
 dropzone.addEventListener('drop', event => {
   event.preventDefault();
   dropzone.classList.remove('drag-over');
-  const files = Array.from(event.dataTransfer.files || []);
-  if (files.length) void setFiles(files);
+  if (event.dataTransfer.files?.length) void addFilesToQueue(event.dataTransfer.files);
 });
 
-function validateUploadFile(file) {
+async function setFile(file) {
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heif', 'image/heic'];
   const allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'heif', 'heic'];
   const extension = getFileExtension(file.name);
 
   if (!allowedTypes.includes(file.type) && !allowedExts.includes(extension)) {
-    throw new Error(`${file.name}: JPG・JPEG・PNG・WebP・HEIF形式のみ対応しています`);
+    showError('JPG・JPEG・PNG・WebP・HEIF形式のみ対応しています');
+    return;
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    throw new Error(`${file.name}: ファイルサイズは25MB以下にしてください`);
-  }
-}
-
-function clearUploadQueue() {
-  uploadQueue.forEach(item => {
-    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
-  });
-  uploadQueue = [];
-  currentUploadId = null;
-  currentBatchId = '';
-}
-
-async function setFiles(files) {
-  if (files.length > MAX_BATCH_UPLOADS) {
-    showError(`一度に選べる写真は${MAX_BATCH_UPLOADS}枚までです`);
+    showError('ファイルサイズは25MB以下にしてください');
     return;
   }
 
-  try {
-    files.forEach(validateUploadFile);
-  } catch (error) {
-    showError(error.message || '写真の読み込みに失敗しました');
-    return;
-  }
-
-  persistCurrentFeedbackDraft();
-  clearUploadQueue();
-  hideError();
-  currentBatchId = `batch-${Date.now()}`;
-  uploadQueue = files.map(file => ({
-    id: createUploadId(),
-    file,
-    previewUrl: URL.createObjectURL(file),
-    thumbUrl: '',
-    dataUrl: '',
-    status: 'pending',
-    evaluationResult: null,
-    feedbackDraft: null,
-    saveState: 'pending',
-  }));
-  renderUploadQueue();
-  for (const item of uploadQueue) {
-    try {
-      item.thumbUrl = await buildQueueThumbnail(item.file);
-      if (uploadQueue.some(upload => upload.id === item.id)) {
-        renderUploadQueue();
-      }
-    } catch (error) {
-      console.warn('Thumbnail build failed', error);
-    }
-  }
-  await selectUploadItem(uploadQueue[0].id);
-}
-
-function resetFile() {
-  persistCurrentFeedbackDraft();
-  clearUploadQueue();
-  currentFile = null;
+  currentFile = file;
   currentFileDataUrl = '';
   latestResultRecord = null;
   revokeCurrentFileUrl();
-  document.getElementById('preview-img').src = '';
-  document.getElementById('preview-name').textContent = '—';
-  document.getElementById('dropzone').style.display = '';
-  document.getElementById('preview-wrap').style.display = 'none';
-  document.getElementById('eval-btn').disabled = true;
-  document.getElementById('result-section').style.display = 'none';
-  renderUploadQueue();
-  updateActionLinks();
+  currentFileUrl = URL.createObjectURL(file);
+  hideError();
+
+  try {
+    const dataUrl = await readFileAsDataURL(file);
+    currentFileDataUrl = dataUrl;
+    document.getElementById('preview-img').src = dataUrl;
+    document.getElementById('preview-name').textContent = file.name;
+    document.getElementById('dropzone').style.display = 'none';
+    document.getElementById('preview-wrap').style.display = 'block';
+    document.getElementById('eval-btn').disabled = false;
+    document.getElementById('result-section').style.display = 'none';
+    updateActionLinks();
+  } catch (error) {
+    console.error(error);
+    resetFile();
+    showError('画像の読み込みに失敗しました。HEIF形式はブラウザによって未対応の場合があります');
+  }
+}
+
+function resetFile() {
+  if (currentQueueIndex >= 0 && currentQueueIndex < trainingQueue.length) {
+    trainingQueue.splice(currentQueueIndex, 1);
+    if (currentQueueIndex >= trainingQueue.length) currentQueueIndex = trainingQueue.length - 1;
+  }
+  void syncCurrentFileView();
   hideError();
 }
 
 function resetAll() {
+  clearTrainingQueue();
+}
+
+function clearTrainingQueue() {
+  trainingQueue = [];
+  currentQueueIndex = -1;
+  void syncCurrentFileView();
+}
+
+function removeCurrentFromQueue() {
   resetFile();
+}
+
+async function goToNextQueueItem() {
+  if (!trainingQueue.length) return;
+  if (currentQueueIndex < trainingQueue.length - 1) {
+    currentQueueIndex += 1;
+    await syncCurrentFileView();
+    await autoEvaluateCurrentQueueItem();
+    return;
+  }
+  setFeedbackStatus('最後の写真まで確認しました', 'success');
 }
 
 function readFileAsDataURL(file) {
@@ -2775,11 +3122,9 @@ function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
 }
 
 async function analyzeImageFile(file, preferredSource = '') {
-  await new Promise(resolve => requestAnimationFrame(() => resolve()));
   const image = await loadImageElement(preferredSource || file);
-  const { ctx, width, height } = createCanvasFromImage(image, getAnalysisMaxSide());
+  const { ctx, width, height } = createCanvasFromImage(image, 768);
   const stats = extractImageStats(ctx, width, height);
-  await new Promise(resolve => setTimeout(resolve, 0));
   const spatial = analyzeSpatialFeatures(stats.gray, width, height, stats);
 
   const metrics = {
@@ -3062,8 +3407,7 @@ function buildAnalysisMeta(metrics, scores) {
 }
 
 async function runEvaluation() {
-  const activeUpload = getActiveUpload();
-  if (!currentFile || !activeUpload) {
+  if (!currentFile) {
     showError('先に写真を選んでください');
     return;
   }
@@ -3076,14 +3420,22 @@ async function runEvaluation() {
   loading.style.display = 'block';
   document.getElementById('result-section').style.display = 'none';
   hideError();
-  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-  loadingLabel.textContent = '写真を確認しています...';
+  const loadingLabels = [
+    '明るさや白飛びを確認しています...',
+    'ピントや細かい写りを確認しています...',
+    '構図や背景のまとまりを確認しています...',
+    '結果と保存データをまとめています...',
+  ];
+  let index = 0;
+  loadingLabel.textContent = loadingLabels[0];
+  const interval = setInterval(() => {
+    index = (index + 1) % loadingLabels.length;
+    loadingLabel.textContent = loadingLabels[index];
+  }, 620);
 
   try {
     const imageData = currentFileDataUrl || await readFileAsDataURL(currentFile);
-    activeUpload.dataUrl = imageData;
-    currentFileDataUrl = imageData;
     const analysis = await analyzeImageFile(currentFile, imageData);
     const ruleBasedScores = { ...analysis.scores };
     const featureVector = buildFeatureVector(analysis.metrics, ruleBasedScores);
@@ -3092,8 +3444,6 @@ async function runEvaluation() {
     const finalTotalScore = Math.round(Number(mlPrediction.predictedTotalScore ?? ruleBasedScores.totalScore));
     const record = {
       id: Date.now(),
-      batchId: currentBatchId,
-      uploadId: activeUpload.id,
       fileName: currentFile.name,
       imageSrc: imageData,
       createdAt: new Date().toISOString(),
@@ -3116,7 +3466,7 @@ async function runEvaluation() {
         correctedScore: '',
         note: '',
         genre: '',
-        reviewMode: DEFAULT_REVIEW_MODE,
+        reviewMode: 'general',
         savedAt: '',
         status: '',
       },
@@ -3136,21 +3486,20 @@ async function runEvaluation() {
     };
 
     await saveToHistory(record);
-    activeUpload.recordId = record.id;
-    activeUpload.evaluationResult = record;
-    activeUpload.feedbackDraft = { ...record.feedback };
-    activeUpload.status = 'evaluated';
-    renderUploadQueue();
+    if (currentQueueIndex >= 0 && trainingQueue[currentQueueIndex]) {
+      trainingQueue[currentQueueIndex].status = 'evaluated';
+      trainingQueue[currentQueueIndex].recordId = record.id;
+      renderQueue();
+    }
     renderCurrentRecord(record);
-    loading.style.display = 'none';
-    evalButton.disabled = false;
     if (collectDeliverySettings().autoSend) {
-      await sendRecordById(record.id);
+      // Developer lab does not auto-send to Drive or public collectors.
     }
   } catch (error) {
     console.error(error);
     showError(error.message || '写真の確認に失敗しました');
   } finally {
+    clearInterval(interval);
     loading.style.display = 'none';
     evalButton.disabled = false;
   }
@@ -3187,6 +3536,10 @@ function buildMlSummaryHtml(record) {
   const modelVersion = record.modelVersion || '未学習';
   const ruleScore = record.ruleBasedScores?.totalScore ?? record.totalScore;
   const scoreGap = Number.isFinite(record.scoreGap) ? record.scoreGap : 0;
+  const feedbackCount = Number(mlRuntimeState.feedbackCount || 0);
+  const modelSampleCount = Number(mlRuntimeState.sampleCount || 0);
+  const minimumMlSamples = Number(mlRuntimeState.minimumMlSamples || 30);
+  const recommendedMlSamples = Number(mlRuntimeState.recommendedMlSamples || 100);
 
   return `
     <div class="ml-summary-card">
@@ -3211,8 +3564,16 @@ function buildMlSummaryHtml(record) {
           <span class="summary-label">自動調整</span>
           <span class="summary-value">${escapeHtml(`${scoreGap}点`)}</span>
         </div>
+        <div class="ml-summary-item">
+          <span class="summary-label">現在の学習保存件数</span>
+          <span class="summary-value">${escapeHtml(`${feedbackCount}件`)}</span>
+        </div>
+        <div class="ml-summary-item">
+          <span class="summary-label">モデル反映件数</span>
+          <span class="summary-value">${escapeHtml(`${modelSampleCount}件`)}</span>
+        </div>
       </div>
-      <p class="feedback-note">調整データがまだ少ない場合や接続できない場合は、自動で標準判定に戻ります。コメントは現在も標準のルールで作成しています。</p>
+      <p class="feedback-note">現在の学習保存件数はローカルDBに保存済みの件数、モデル反映件数は実際に学習済みモデルへ入った件数です。${minimumMlSamples}件未満は Rule-based、通常運用の目安は ${recommendedMlSamples}件以上です。</p>
     </div>
   `;
 }
@@ -3223,6 +3584,12 @@ function normalizeFeedbackGenreValues(rawValue = '') {
     .map(value => FEEDBACK_GENRE_ALIAS[value] || value)
     .filter(value => FEEDBACK_GENRE_OPTIONS.some(option => option.code === value))
     .filter((value, index, array) => array.indexOf(value) === index);
+}
+
+function formatGenreLabels(rawValue = '') {
+  const selected = normalizeFeedbackGenreValues(rawValue);
+  if (!selected.length) return '未入力';
+  return selected.map(code => FEEDBACK_GENRE_OPTIONS.find(option => option.code === code)?.label || code).join(' / ');
 }
 
 function syncFeedbackGenreButtons() {
@@ -3261,16 +3628,49 @@ function toggleFeedbackGenre(value) {
 function buildFeedbackSectionHtml(record) {
   const feedback = record.feedback || {};
   const selectedGenres = normalizeFeedbackGenreValues(feedback.genre);
+  const modeMeta = getWorkflowModeMeta();
+  const userReference = record.userReference || {};
+  const recheckScores = feedback.recheckScores || {};
+  const showRecheckMode = reviewWorkflowMode === 'user-recheck';
+  const recheckFields = [
+    ['composition', '構図'],
+    ['color', '色'],
+    ['subject', '主題性'],
+    ['light', '光'],
+    ['technical', '技術'],
+    ['impact', '印象'],
+  ];
   return `
     <div class="feedback-card">
       <div class="section-head">
-        <p class="section-title">ご意見・感想</p>
-        <span class="status-pill rule">使うほど精度改善に役立ちます</span>
+        <p class="section-title">学習用ラベル入力</p>
+        <span class="status-pill ml">開発者専用</span>
       </div>
       <div class="feedback-grid">
+        ${showRecheckMode ? `
+          <div class="feedback-field full">
+            <label class="field-label">ユーザー入力の参考表示</label>
+            <div class="ml-summary-grid">
+              <div class="ml-summary-item">
+                <span class="summary-label">結果の妥当性</span>
+                <span class="summary-value">${escapeHtml(userReference.fairnessLabel || '未入力')}</span>
+              </div>
+              <div class="ml-summary-item">
+                <span class="summary-label">写真の種類</span>
+                <span class="summary-value">${escapeHtml(formatGenreLabels(userReference.genre || ''))}</span>
+              </div>
+            </div>
+          </div>
+          ${recheckFields.map(([key, label]) => `
+            <div class="feedback-field">
+              <label class="field-label" for="recheck-${key}">${label} 再評価</label>
+              <input id="recheck-${key}" type="number" min="0" max="100" step="1" value="${escapeHtml(recheckScores[key] ?? '')}" placeholder="0-100">
+            </div>
+          `).join('')}
+        ` : ''}
         <div class="feedback-field">
-          <label class="field-label" for="feedback-fairness">この結果はイメージに近いですか</label>
-          <div class="segmented-control" role="group" aria-label="この結果はイメージに近いですか">
+          <label class="field-label" for="feedback-fairness">この結果は妥当ですか</label>
+          <div class="segmented-control" role="group" aria-label="この結果は妥当ですか">
             <button type="button" class="segmented-btn ${feedback.fairness === 'valid' ? 'active' : ''}" aria-pressed="${feedback.fairness === 'valid' ? 'true' : 'false'}" onclick="setSegmentedValue('feedback-fairness', 'valid', event)">妥当</button>
             <button type="button" class="segmented-btn ${feedback.fairness === 'too_high' ? 'active' : ''}" aria-pressed="${feedback.fairness === 'too_high' ? 'true' : 'false'}" onclick="setSegmentedValue('feedback-fairness', 'too_high', event)">高すぎる</button>
             <button type="button" class="segmented-btn ${feedback.fairness === 'too_low' ? 'active' : ''}" aria-pressed="${feedback.fairness === 'too_low' ? 'true' : 'false'}" onclick="setSegmentedValue('feedback-fairness', 'too_low', event)">低すぎる</button>
@@ -3281,6 +3681,10 @@ function buildFeedbackSectionHtml(record) {
             <option value="too_high" ${feedback.fairness === 'too_high' ? 'selected' : ''}>高すぎる</option>
             <option value="too_low" ${feedback.fairness === 'too_low' ? 'selected' : ''}>低すぎる</option>
           </select>
+        </div>
+        <div class="feedback-field">
+          <label class="field-label" for="feedback-corrected-score">開発者補正点</label>
+          <input id="feedback-corrected-score" type="number" min="0" max="100" step="1" value="${escapeHtml(feedback.correctedScore || '')}" placeholder="例: 78">
         </div>
         <div class="feedback-field">
           <label class="field-label" for="feedback-genre">写真の種類</label>
@@ -3298,12 +3702,17 @@ function buildFeedbackSectionHtml(record) {
           </div>
           <p class="feedback-note">「その他」を除いて2項目まで選べます。「その他」は単独選択です。保存時は内部コードで記録されます。</p>
         </div>
+        <div class="feedback-field full">
+          <label class="field-label" for="feedback-note">判定メモ</label>
+          <textarea id="feedback-note" placeholder="補正理由や見直しポイントを残せます">${escapeHtml(feedback.note || '')}</textarea>
+        </div>
       </div>
       <div class="feedback-actions">
-        <button class="btn-feedback" onclick="saveFeedbackForLatest()">感想を保存する</button>
+        <button class="btn-feedback" onclick="saveFeedbackForLatest()">${escapeHtml(modeMeta.saveLabel)}</button>
+        <button class="btn-secondary" onclick="saveFeedbackForLatest(true)">${escapeHtml(modeMeta.saveAndNextLabel)}</button>
         <span class="feedback-status" id="feedback-status">${escapeHtml(feedback.status || '')}</span>
       </div>
-      <p class="feedback-note">保存されるのは点数や特徴量、補正点、写真の種類などです。画像そのものは精度改善用データに含まれません。</p>
+      <p class="feedback-note">${escapeHtml(modeMeta.note)} この画面ではローカルの学習DBへ保存します。公開 collector には送信しません。</p>
     </div>
   `;
 }
@@ -3312,6 +3721,7 @@ function buildResultHTML(record, options = {}) {
   const totalColor = getScoreColor(record.totalScore);
   const scoreItems = SCORE_ITEMS;
   const includeFeedback = Boolean(options.includeFeedback);
+  const includeMlSummary = options.includeMlSummary !== false;
   const badgeBackground = record.totalScore >= 85 ? 'var(--green-dim)'
     : record.totalScore >= 70 ? 'var(--blue-dim)'
       : record.totalScore >= 50 ? 'var(--amber-dim)'
@@ -3346,7 +3756,7 @@ function buildResultHTML(record, options = {}) {
 
     <div class="scores-grid">${scoreCardsHtml}</div>
 
-    ${buildMlSummaryHtml(record)}
+    ${includeMlSummary ? buildMlSummaryHtml(record) : ''}
     ${includeFeedback ? buildFeedbackSectionHtml(record) : ''}
     ${buildDeliveryHtml(record)}
   `;
@@ -3354,11 +3764,12 @@ function buildResultHTML(record, options = {}) {
 
 function renderCurrentRecord(record) {
   latestResultRecord = record;
-  document.getElementById('loading').style.display = 'none';
   document.getElementById('result-section').style.display = 'block';
-  document.getElementById('result-inner').innerHTML = buildResultHTML(record, { includeFeedback: true });
+  document.getElementById('side-ml-summary').innerHTML = buildMlSummaryHtml(record);
+  document.getElementById('result-inner').innerHTML = buildResultHTML(record, { includeFeedback: true, includeMlSummary: false });
   syncFeedbackGenreButtons();
   updateActionLinks(record);
+  renderScoreBars(document.getElementById('side-ml-summary'));
   renderScoreBars(document.getElementById('result-section'));
 }
 
@@ -3389,13 +3800,22 @@ function setSegmentedValue(selectId, value, event) {
 }
 
 function collectFeedbackFormValues() {
+  const recheckScores = {
+    composition: document.getElementById('recheck-composition')?.value || '',
+    color: document.getElementById('recheck-color')?.value || '',
+    subject: document.getElementById('recheck-subject')?.value || '',
+    light: document.getElementById('recheck-light')?.value || '',
+    technical: document.getElementById('recheck-technical')?.value || '',
+    impact: document.getElementById('recheck-impact')?.value || '',
+  };
   return {
     fairness: document.getElementById('feedback-fairness')?.value || '',
-    commentUsefulness: document.getElementById('feedback-comment-usefulness')?.value || '',
     correctedScore: document.getElementById('feedback-corrected-score')?.value || '',
     note: document.getElementById('feedback-note')?.value.trim() || '',
     genre: document.getElementById('feedback-genre')?.value || '',
-    reviewMode: DEFAULT_REVIEW_MODE,
+    commentUsefulness: '',
+    reviewMode: 'general',
+    recheckScores,
   };
 }
 
@@ -3406,25 +3826,11 @@ function setFeedbackStatus(message, kind = '') {
   element.className = kind ? `feedback-status ${kind}` : 'feedback-status';
 }
 
-function buildReviewAsset(record) {
-  const delivery = record.delivery || {};
-  const driveFileId = String(delivery.driveFileId || '');
-  const thumbnailUrl = driveFileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveFileId)}&sz=w1200` : '';
-  return {
-    fileName: record.fileName || '',
-    driveUrl: delivery.driveUrl || '',
-    driveFileId,
-    thumbnailUrl,
-    savedToDrive: Boolean(delivery.savedToDrive || delivery.driveUrl || driveFileId),
-    sentAt: delivery.sentAt || '',
-  };
-}
-
 function buildLearningFeedbackPayload(record, feedback) {
+  const modeMeta = getWorkflowModeMeta();
   return {
     imageId: String(record.id),
     createdAt: record.createdAt,
-    fileName: record.fileName || '',
     image_metadata: record.imageMeta || {},
     features: record.featureVector || {},
     predicted_scores: record.ruleBasedScores || {
@@ -3457,8 +3863,8 @@ function buildLearningFeedbackPayload(record, feedback) {
     modelVersion: record.modelVersion || '',
     mlScore: record.mlScore,
     scoreGap: record.scoreGap,
-    reviewAsset: buildReviewAsset(record),
-    source: window.location.hostname.includes('github.io') ? 'public-pages' : 'local-app',
+    source: modeMeta.source,
+    userReference: record.userReference || {},
   };
 }
 
@@ -3489,75 +3895,68 @@ async function saveFeedbackToPublicCollector(payload) {
   return data;
 }
 
-async function saveFeedbackForLatest() {
+async function saveFeedbackForLatest(moveNext = false) {
   if (!latestResultRecord) {
     showError('先に写真をチェックしてください');
     return;
   }
 
   const feedback = collectFeedbackFormValues();
-  if (!feedback.fairness && !feedback.genre) {
-    setFeedbackStatus('どれか1つ以上入力してください', 'error');
+  const hasRecheckScore = Object.values(feedback.recheckScores || {}).some(value => value !== '');
+  if (!feedback.fairness && feedback.correctedScore === '' && !feedback.genre && !feedback.note && !hasRecheckScore) {
+    setFeedbackStatus('学習用ラベルを1つ以上入力してください', 'error');
     return;
+  }
+
+  if (feedback.correctedScore !== '') {
+    const numeric = Number(feedback.correctedScore);
+    if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) {
+      setFeedbackStatus('補正点は0〜100で入力してください', 'error');
+      return;
+    }
+  }
+
+  for (const [key, value] of Object.entries(feedback.recheckScores || {})) {
+    if (value === '') continue;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) {
+      setFeedbackStatus(`再評価スコア（${key}）は0〜100で入力してください`, 'error');
+      return;
+    }
   }
 
   setFeedbackStatus('保存中...');
 
   try {
     const payload = buildLearningFeedbackPayload(latestResultRecord, feedback);
-    let localResponse = null;
-    let publicResponse = null;
-    let lastError = null;
-
-    try {
-      localResponse = await apiRequest('/api/ml/feedback', {
-        method: 'POST',
-        body: payload,
-      });
-    } catch (error) {
-      lastError = error;
-      console.warn('Local feedback save failed', error);
-    }
-
-    try {
-      publicResponse = await saveFeedbackToPublicCollector(payload);
-    } catch (error) {
-      lastError = error;
-      console.warn('Public feedback collector save failed', error);
-    }
-
-    if (!localResponse && !publicResponse) {
-      throw lastError || new Error('感想の保存先へ接続できませんでした');
-    }
+    const localResponse = await apiRequest('/api/ml/feedback', {
+      method: 'POST',
+      body: payload,
+    });
 
     const updatedRecord = {
       ...latestResultRecord,
       feedback: {
         ...feedback,
-        savedAt: localResponse?.savedAt || publicResponse?.savedAt || new Date().toISOString(),
-        status: publicResponse && !localResponse ? '精度改善用として保存済み' : '保存済み',
+        savedAt: localResponse?.savedAt || new Date().toISOString(),
+        status: '学習保存済み',
       },
     };
-    const activeUpload = getActiveUpload();
-    if (activeUpload && activeUpload.recordId === updatedRecord.id) {
-      activeUpload.evaluationResult = updatedRecord;
-      activeUpload.feedbackDraft = { ...updatedRecord.feedback };
-      activeUpload.status = 'saved';
-      renderUploadQueue();
-    }
+    await refreshMlStatus();
     await refreshRecordViews(updatedRecord);
-    if (localResponse && publicResponse) {
-      setFeedbackStatus('端末内と精度改善用の両方に保存しました', 'success');
-    } else if (localResponse) {
-      setFeedbackStatus('この端末に保存しました', 'success');
-    } else {
-      setFeedbackStatus('精度改善用として保存しました', 'success');
+    if (currentQueueIndex >= 0 && trainingQueue[currentQueueIndex]) {
+      trainingQueue[currentQueueIndex].status = 'saved';
+      trainingQueue[currentQueueIndex].recordId = updatedRecord.id;
+      renderQueue();
     }
-    await moveToNextUploadAfterFeedback();
+    setFeedbackStatus('ローカル学習DBへ保存しました', 'success');
+    if (moveNext) {
+      await goToNextQueueItem();
+    }
   } catch (error) {
     console.error(error);
     setFeedbackStatus(error.message || '保存に失敗しました', 'error');
-    showError(error.message || '感想の保存に失敗しました');
+    showError(error.message || '学習データの保存に失敗しました');
   }
 }
 
@@ -3669,17 +4068,25 @@ async function clearAllHistory() {
 
 function buildHistoryCard(record, index) {
   const totalColor = getScoreColor(record.totalScore);
+  const badgeBackground = record.totalScore >= 85 ? 'rgba(74,222,128,0.85)'
+    : record.totalScore >= 70 ? 'rgba(96,165,250,0.85)'
+      : record.totalScore >= 50 ? 'rgba(251,191,36,0.85)'
+        : 'rgba(248,113,113,0.85)';
+  const status = getDeliveryStatus(record);
 
   return `
     <div class="history-card" style="animation-delay:${index * 0.04}s" onclick="openModal(${record.id})">
       <div class="history-thumb">
-        <img src="${record.imageSrc}" alt="${escapeHtml(record.fileName)}" loading="lazy" decoding="async" fetchpriority="low">
+        <img src="${record.imageSrc}" alt="${escapeHtml(record.fileName)}" loading="lazy">
+        <div class="history-score-badge" style="background:${badgeBackground};color:#0f0f11">${record.totalScore}</div>
       </div>
       <div class="history-info">
         <div class="history-info-top">
           <span class="history-score-big" style="color:${totalColor.text}">${record.totalScore}<span style="font-size:0.7em;color:var(--text-dim)">/100</span></span>
           <span class="history-date">${escapeHtml(formatDate(record.createdAt))}</span>
         </div>
+        <p class="history-comment">${escapeHtml(record.overallComment)}</p>
+        <p class="history-comment" style="margin-bottom:8px;color:var(--text-dim)">保存状態: ${escapeHtml(status.label)} / Google Drive</p>
         <div class="history-card-footer">
           <button class="btn-detail" onclick="openModal(${record.id});event.stopPropagation()">詳細</button>
           <button class="btn-delete" onclick="deleteRecord(${record.id}, event)">削除</button>
@@ -3745,11 +4152,6 @@ function closeModalDirect() {
 
 async function refreshRecordViews(record) {
   await saveToHistory(record);
-  const upload = uploadQueue.find(item => item.recordId === record.id || item.id === record.uploadId);
-  if (upload) {
-    upload.recordId = record.id;
-    upload.evaluationResult = record;
-  }
   if (latestResultRecord?.id === record.id) {
     renderCurrentRecord(record);
   }
@@ -3804,12 +4206,6 @@ async function sendRecordById(id) {
         sendError: [response.driveError, response.emailError].filter(Boolean).join(' / '),
       }),
     };
-    const upload = uploadQueue.find(item => item.recordId === id);
-    if (upload) {
-      upload.evaluationResult = updatedRecord;
-      if (upload.status === 'pending') upload.status = 'evaluated';
-      renderUploadQueue();
-    }
     await refreshRecordViews(updatedRecord);
   } catch (error) {
     console.error(error);
@@ -3839,13 +4235,181 @@ async function sendLatestRecord() {
   await sendRecordById(latestResultRecord.id);
 }
 
+function loadDeveloperReviewState() {
+  try {
+    return JSON.parse(localStorage.getItem(REVIEW_STATE_STORAGE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveDeveloperReviewState(state) {
+  localStorage.setItem(REVIEW_STATE_STORAGE_KEY, JSON.stringify(state));
+}
+
+function getDeveloperReviewState(id) {
+  return loadDeveloperReviewState()[id] || 'pending';
+}
+
+function setDeveloperReviewState(id, state) {
+  const current = loadDeveloperReviewState();
+  current[id] = state;
+  saveDeveloperReviewState(current);
+}
+
+function buildReviewApiUrl() {
+  const source = document.getElementById('review-source-mode').value;
+  const apiBase = normalizeHttpUrl(getMlApiBase(), DEFAULT_ML_API_BASE);
+  if (source === 'local') return `${apiBase}/api/review/local-records`;
+  const rawCollectorUrl = document.getElementById('review-collector-url').value.trim() || DEFAULT_PUBLIC_FEEDBACK_EXPORT_URL;
+  const collectorUrl = normalizeHttpUrl(rawCollectorUrl, DEFAULT_PUBLIC_FEEDBACK_EXPORT_URL);
+  return `${apiBase}/api/review/public-records?url=${encodeURIComponent(collectorUrl)}`;
+}
+
+function buildReviewStatusTag(state) {
+  if (state === 'reviewed') return '<span class="review-tag ok">確認済み</span>';
+  if (state === 'flagged') return '<span class="review-tag warn">要確認</span>';
+  if (state === 'excluded') return '<span class="review-tag danger">除外</span>';
+  return '<span class="review-tag">未確認</span>';
+}
+
+function buildReviewRecordCard(record) {
+  const reviewState = getDeveloperReviewState(record.id);
+  const imageHtml = record.thumbnailUrl
+    ? `<img src="${escapeHtml(record.thumbnailUrl)}" alt="${escapeHtml(record.fileName || record.id)}" loading="lazy" decoding="async">`
+    : '画像リンクがありません';
+  const thumbClass = record.thumbnailUrl ? 'review-thumb' : 'review-thumb empty';
+
+  return `
+    <article class="review-card">
+      <div class="${thumbClass}">${imageHtml}</div>
+      <div class="review-meta">
+        <div class="review-title-row">
+          <div class="review-title">${escapeHtml(record.fileName || record.id || '無題')}</div>
+          <div class="review-score">${escapeHtml(String(normalizeScore(record.totalScore)))}</div>
+        </div>
+        <div class="review-sub">${escapeHtml(formatDate(record.createdAt))}</div>
+        <div class="review-tags">
+          ${buildReviewStatusTag(reviewState)}
+          ${record.fairness ? `<span class="review-tag">${escapeHtml(record.fairness)}</span>` : ''}
+          ${record.genre ? `<span class="review-tag">${escapeHtml(record.genre)}</span>` : ''}
+          ${record.evaluationMode ? `<span class="review-tag">${escapeHtml(record.evaluationMode)}</span>` : ''}
+          ${record.hasImageAsset ? '<span class="review-tag ok">Drive画像あり</span>' : '<span class="review-tag">画像リンクなし</span>'}
+        </div>
+        <div class="review-sub">imageId: ${escapeHtml(record.id || '')}</div>
+        <div class="review-sub">model: ${escapeHtml(record.modelVersion || '未設定')}</div>
+        ${record.note ? `<div class="review-sub">note: ${escapeHtml(record.note)}</div>` : ''}
+      </div>
+      <div class="review-actions">
+        ${record.driveUrl ? `<a class="review-link-btn" href="${escapeHtml(record.driveUrl)}" target="_blank" rel="noreferrer">Driveを開く</a>` : '<button class="review-link-btn" type="button" disabled>Driveリンクなし</button>'}
+        ${record.thumbnailUrl ? `<a class="review-link-btn" href="${escapeHtml(record.thumbnailUrl)}" target="_blank" rel="noreferrer">画像を開く</a>` : '<button class="review-link-btn" type="button" disabled>画像なし</button>'}
+      </div>
+      <div class="review-state-actions">
+        <button type="button" class="review-state-btn" data-state="reviewed" onclick="updateDeveloperReviewState('${escapeHtml(record.id)}', 'reviewed')">確認済み</button>
+        <button type="button" class="review-state-btn" data-state="flagged" onclick="updateDeveloperReviewState('${escapeHtml(record.id)}', 'flagged')">要確認</button>
+        <button type="button" class="review-state-btn" data-state="excluded" onclick="updateDeveloperReviewState('${escapeHtml(record.id)}', 'excluded')">除外</button>
+      </div>
+    </article>
+  `;
+}
+
+function applyReviewFilters(records) {
+  const search = (document.getElementById('review-search-input').value || '').trim().toLowerCase();
+  return records.filter(record => {
+    const reviewState = getDeveloperReviewState(record.id);
+    if (activeReviewFilter === 'pending' && reviewState !== 'pending') return false;
+    if (activeReviewFilter === 'reviewed' && reviewState !== 'reviewed') return false;
+    if (activeReviewFilter === 'flagged' && reviewState !== 'flagged') return false;
+    if (activeReviewFilter === 'excluded' && reviewState !== 'excluded') return false;
+    if (activeReviewFilter === 'with-image' && !record.hasImageAsset) return false;
+    if (!search) return true;
+    const haystack = [
+      record.id,
+      record.fileName,
+      record.genre,
+      record.fairness,
+      record.modelVersion,
+      record.source,
+    ].join(' ').toLowerCase();
+    return haystack.includes(search);
+  });
+}
+
+function renderReviewSummary(records) {
+  const reviewed = records.filter(record => getDeveloperReviewState(record.id) === 'reviewed').length;
+  const pending = records.filter(record => getDeveloperReviewState(record.id) === 'pending').length;
+  const assets = records.filter(record => record.hasImageAsset).length;
+  document.getElementById('review-count-total').textContent = String(records.length);
+  document.getElementById('review-count-assets').textContent = String(assets);
+  document.getElementById('review-count-pending').textContent = String(pending);
+  document.getElementById('review-count-reviewed').textContent = String(reviewed);
+}
+
+function renderReviewRecords() {
+  const filtered = applyReviewFilters(reviewRecords);
+  const grid = document.getElementById('review-records-grid');
+  const empty = document.getElementById('review-empty-state');
+  renderReviewSummary(reviewRecords);
+  if (!filtered.length) {
+    grid.innerHTML = '';
+    empty.hidden = false;
+    return;
+  }
+  empty.hidden = true;
+  grid.innerHTML = filtered.map(buildReviewRecordCard).join('');
+}
+
+function setReviewStatusLine(message, isError = false) {
+  const line = document.getElementById('review-status-line');
+  line.textContent = message;
+  line.style.color = isError ? 'var(--red)' : 'var(--text-muted)';
+}
+
+async function loadReviewRecords() {
+  setReviewStatusLine('読み込み中...');
+  try {
+    const response = await fetch(buildReviewApiUrl(), { cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok || data?.success === false) {
+      throw new Error(data?.message || `HTTP ${response.status}`);
+    }
+    reviewRecords = Array.isArray(data.records) ? data.records : [];
+    reviewRecordsLoaded = true;
+    renderReviewRecords();
+    setReviewStatusLine(`${reviewRecords.length}件を読み込みました`);
+  } catch (error) {
+    console.error(error);
+    reviewRecords = [];
+    reviewRecordsLoaded = false;
+    renderReviewRecords();
+    setReviewStatusLine(error.message || '読み込みに失敗しました', true);
+  }
+}
+
+function updateDeveloperReviewState(id, state) {
+  setDeveloperReviewState(id, state);
+  renderReviewRecords();
+}
+
 applyDeliverySettings();
 updateLaunchWarning();
-document.body.classList.toggle('mobile-lite', isMobileLikeDevice());
-setupPullToRefreshGuard();
 updateActionLinks();
 void refreshMlStatus();
 void renderHistory();
+
+document.getElementById('review-collector-url').value = DEFAULT_PUBLIC_FEEDBACK_EXPORT_URL;
+document.getElementById('review-refresh-btn').addEventListener('click', () => void loadReviewRecords());
+document.getElementById('review-search-input').addEventListener('input', renderReviewRecords);
+document.getElementById('review-source-mode').addEventListener('change', () => void loadReviewRecords());
+document.getElementById('review-status-filters').addEventListener('click', event => {
+  const button = event.target.closest('[data-review-filter]');
+  if (!button) return;
+  activeReviewFilter = button.dataset.reviewFilter;
+  document.querySelectorAll('[data-review-filter]').forEach(chip => chip.classList.toggle('active', chip === button));
+  renderReviewRecords();
+});
+
+showPage(getInitialPageName(), { updateHash: false });
 
 if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
   navigator.serviceWorker.register('./service-worker.js').catch(error => {
