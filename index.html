@@ -1861,6 +1861,7 @@ const DB_NAME = 'photo_eval_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'history';
 const MAX_HISTORY_ITEMS = 100;
+const HISTORY_RENDER_PAGE_SIZE = 24;
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 const MAX_BATCH_UPLOADS = 5;
 const DELIVERY_MAX_SIDE = 1920;
@@ -1877,6 +1878,7 @@ let modalRecordId = null;
 let uploadQueue = [];
 let currentUploadId = null;
 let currentBatchId = '';
+let historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
 let browserMlModelPromise = null;
 let mlRuntimeState = {
   mode: 'Rule-based',
@@ -2543,7 +2545,10 @@ function showPage(name) {
   document.getElementById(`page-${name}`).classList.add('active');
   const tabIndexMap = { evaluate: 0, stats: 1, history: 2 };
   document.querySelectorAll('.tab-btn')[tabIndexMap[name] ?? 0].classList.add('active');
-  if (name === 'history') void renderHistory();
+  if (name === 'history') {
+    historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
+    void renderHistory();
+  }
 }
 
 document.getElementById('file-input').addEventListener('change', event => {
@@ -3514,6 +3519,7 @@ async function runEvaluation(options = {}) {
       uploadId: activeUpload.id,
       fileName: fileForEvaluation.name,
       imageSrc: imageData,
+      historyThumbSrc: activeUpload.thumbUrl || imageData,
       createdAt: new Date().toISOString(),
       ...analysis.scores,
       totalScore: ruleBasedScores.totalScore,
@@ -4145,11 +4151,12 @@ async function clearAllHistory() {
 
 function buildHistoryCard(record, index) {
   const totalColor = getScoreColor(record.totalScore);
+  const thumbSrc = record.historyThumbSrc || record.imageSrc;
 
   return `
     <div class="history-card" style="animation-delay:${index * 0.04}s" onclick="openModal(${record.id})">
       <div class="history-thumb">
-        <img src="${record.imageSrc}" alt="${escapeHtml(record.fileName)}" loading="lazy" decoding="async" fetchpriority="low">
+        <img src="${thumbSrc}" alt="${escapeHtml(record.fileName)}" loading="lazy" decoding="async" fetchpriority="low">
       </div>
       <div class="history-info">
         <div class="history-info-top">
@@ -4179,11 +4186,25 @@ async function renderHistory() {
       return;
     }
     empty.style.display = 'none';
-    grid.innerHTML = history.map(buildHistoryCard).join('');
+    const visibleItems = history.slice(0, historyRenderLimit);
+    const hasMore = history.length > visibleItems.length;
+    grid.innerHTML = `
+      ${visibleItems.map(buildHistoryCard).join('')}
+      ${hasMore ? `
+        <button type="button" class="btn-secondary" style="grid-column:1/-1;min-height:52px" onclick="loadMoreHistoryItems()">
+          続きを表示する
+        </button>
+      ` : ''}
+    `;
   } catch (error) {
     console.error(error);
     showError('履歴の読み込みに失敗しました');
   }
+}
+
+function loadMoreHistoryItems() {
+  historyRenderLimit += HISTORY_RENDER_PAGE_SIZE;
+  void renderHistory();
 }
 
 async function deleteRecord(id, event) {
