@@ -3713,23 +3713,14 @@ async function runEvaluation(options = {}) {
         ]);
 
         const finalTotalScore = Math.round(Number(mlPrediction.predictedTotalScore ?? ruleBasedScores.totalScore));
-        const dlGenreResult = await requestDlEstimatedGenre(imageData, analysis).catch(error => {
-          console.warn('DL genre prediction unavailable', error);
-          return {
-            genre: record.estimatedGenre || estimateGenreFromMetrics(analysis.metrics, ruleBasedScores),
-            mode: '標準推定',
-          };
-        });
-        const estimatedGenre = dlGenreResult.genre;
-        const categoryEstimateMode = dlGenreResult.mode || '標準推定';
         const updatedRecord = {
           ...record,
           totalScore: finalTotalScore,
           overallComment: applyMlScoreToComment(analysis.comments.overallComment, finalTotalScore),
           imageMeta: buildImageMetadata(fileForEvaluation, analysis.metrics, ruleBasedScores, exifMetadata),
           originalFileHeaderBase64,
-          estimatedGenre,
-          categoryEstimateMode,
+          estimatedGenre: record.estimatedGenre || estimateGenreFromMetrics(analysis.metrics, ruleBasedScores),
+          categoryEstimateMode: '標準推定',
           evaluationMode: mlPrediction.usedModel ? 'ML-assisted' : 'Rule-based',
           modelVersion: mlPrediction.modelVersion || '',
           mlScore: mlPrediction.usedModel ? Number(mlPrediction.predictedTotalScore || finalTotalScore) : null,
@@ -3739,6 +3730,19 @@ async function runEvaluation(options = {}) {
         activeUpload.evaluationResult = updatedRecord;
         latestResultRecord = updatedRecord;
         await refreshRecordViews(updatedRecord);
+
+        void requestDlEstimatedGenre(imageData, analysis).then(async dlGenreResult => {
+          const genreUpdatedRecord = {
+            ...updatedRecord,
+            estimatedGenre: dlGenreResult.genre,
+            categoryEstimateMode: dlGenreResult.mode || 'DL基準',
+          };
+          activeUpload.evaluationResult = genreUpdatedRecord;
+          latestResultRecord = genreUpdatedRecord;
+          await refreshRecordViews(genreUpdatedRecord);
+        }).catch(error => {
+          console.warn('DL genre prediction unavailable', error);
+        });
 
         if (collectDeliverySettings().autoSend) {
           await sendRecordById(updatedRecord.id);
