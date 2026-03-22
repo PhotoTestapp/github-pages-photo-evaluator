@@ -1838,6 +1838,10 @@ const FEEDBACK_GENRE_OPTIONS = [
   { code: 'food', label: '食べ物' },
   { code: 'other', label: 'その他' },
 ];
+const FEEDBACK_GENRE_LABELS = FEEDBACK_GENRE_OPTIONS.reduce((labels, option) => {
+  labels[option.code] = option.label;
+  return labels;
+}, {});
 const FEEDBACK_GENRE_ALIAS = {
   portrait: 'portrait',
   landscape: 'landscape',
@@ -3291,6 +3295,23 @@ function buildImageMetadata(file, metrics, scores, exifMetadata = {}) {
   };
 }
 
+function estimateGenreFromMetrics(metrics, scores) {
+  const aspectRatio = metrics.width / Math.max(1, metrics.height);
+  const centeredSubject = metrics.subjectCenterSupport >= 0.58;
+  const focusedSubject = metrics.subjectConcentration >= 0.08;
+  const scenicSpread = metrics.subjectConcentration <= 0.075 && metrics.backgroundInformation >= 0.42;
+
+  if (aspectRatio >= 1.18 && scenicSpread) return 'landscape';
+  if (focusedSubject && centeredSubject && metrics.backgroundInformation <= 0.72 && scores.subjectScore >= 72) {
+    if (metrics.saturationRatio >= 0.16 && scores.colorScore >= 70) return 'flora';
+    if (metrics.brightnessMean >= 92 && metrics.brightnessMean <= 176 && scores.technicalScore >= 60) return 'portrait';
+  }
+  if (focusedSubject && centeredSubject && metrics.backgroundInformation <= 0.76 && metrics.saturationRatio >= 0.1) return 'food';
+  if (focusedSubject && metrics.subjectCenterSupport >= 0.46 && scores.technicalScore >= 66) return 'animal';
+  if (metrics.saturationRatio >= 0.18 && scores.colorScore >= 74 && focusedSubject) return 'flora';
+  return 'other';
+}
+
 function applyMlScoreToComment(text, totalScore) {
   return String(text || '').replace(/総合\d+点。/, `総合${totalScore}点。`);
 }
@@ -3530,6 +3551,7 @@ async function runEvaluation(options = {}) {
       featureVector,
       imageMeta: buildImageMetadata(fileForEvaluation, analysis.metrics, ruleBasedScores, {}),
       originalFileHeaderBase64: '',
+      estimatedGenre: estimateGenreFromMetrics(analysis.metrics, ruleBasedScores),
       ruleBasedScores,
       evaluationMode: 'Rule-based',
       modelVersion: '',
@@ -3604,6 +3626,15 @@ async function runEvaluation(options = {}) {
           overallComment: applyMlScoreToComment(analysis.comments.overallComment, finalTotalScore),
           imageMeta: buildImageMetadata(fileForEvaluation, analysis.metrics, ruleBasedScores, exifMetadata),
           originalFileHeaderBase64,
+          estimatedGenre: estimateGenreFromMetrics(analysis.metrics, {
+            compositionScore: record.compositionScore,
+            lightScore: record.lightScore,
+            colorScore: record.colorScore,
+            technicalScore: record.technicalScore,
+            subjectScore: record.subjectScore,
+            impressionScore: record.impressionScore,
+            totalScore: finalTotalScore,
+          }),
           evaluationMode: mlPrediction.usedModel ? 'ML-assisted' : 'Rule-based',
           modelVersion: mlPrediction.modelVersion || '',
           mlScore: mlPrediction.usedModel ? Number(mlPrediction.predictedTotalScore || finalTotalScore) : null,
@@ -3663,6 +3694,7 @@ function buildMlSummaryHtml(record) {
   const modelVersion = record.modelVersion || '未学習';
   const ruleScore = record.ruleBasedScores?.totalScore ?? record.totalScore;
   const scoreGap = Number.isFinite(record.scoreGap) ? record.scoreGap : 0;
+  const estimatedGenreLabel = FEEDBACK_GENRE_LABELS[record.estimatedGenre] || 'その他';
 
   return `
     <div class="ml-summary-card">
@@ -3686,6 +3718,10 @@ function buildMlSummaryHtml(record) {
         <div class="ml-summary-item">
           <span class="summary-label">自動調整</span>
           <span class="summary-value">${escapeHtml(`${scoreGap}点`)}</span>
+        </div>
+        <div class="ml-summary-item">
+          <span class="summary-label">推定カテゴリ</span>
+          <span class="summary-value">${escapeHtml(estimatedGenreLabel)}</span>
         </div>
       </div>
       <p class="feedback-note">調整データがまだ少ない場合や接続できない場合は、自動で標準判定に戻ります。コメントは現在も標準のルールで作成しています。</p>
