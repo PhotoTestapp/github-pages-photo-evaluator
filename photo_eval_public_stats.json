@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-03-22T14:51:15.829624+00:00",
-  "modelVersion": "linear-v2-20260322235115",
-  "sampleCount": 286,
+  "generatedAt": "2026-03-23T03:59:59.568005+00:00",
+  "modelVersion": "linear-v2-20260323125959",
+  "sampleCount": 293,
   "summary": {
-    "totalRecords": 286,
-    "averageTotalScore": 65.3
+    "totalRecords": 293,
+    "averageTotalScore": 65.36
   },
   "scoreHistogram": {
-    "maxCount": 170,
+    "maxCount": 174,
     "buckets": [
       {
         "label": "0-9",
@@ -49,13 +49,13 @@
         "label": "60-69",
         "min": 60,
         "max": 69,
-        "count": 170
+        "count": 174
       },
       {
         "label": "70-79",
         "min": 70,
         "max": 79,
-        "count": 73
+        "count": 76
       },
       {
         "label": "80-89",
@@ -86,11 +86,11 @@
     },
     {
       "label": "flora",
-      "count": 39
+      "count": 45
     },
     {
       "label": "food",
-      "count": 101
+      "count": 102
     },
     {
       "label": "other",
@@ -100,23 +100,23 @@
   "itemAverages": [
     {
       "label": "composition",
-      "value": 63.96
+      "value": 63.99
     },
     {
       "label": "light",
-      "value": 75.44
+      "value": 75.58
     },
     {
       "label": "color",
-      "value": 69.9
+      "value": 69.97
     },
     {
       "label": "technical",
-      "value": 70.42
+      "value": 69.86
     },
     {
       "label": "subject",
-      "value": 61.11
+      "value": 61.32
     },
     {
       "label": "impact",
