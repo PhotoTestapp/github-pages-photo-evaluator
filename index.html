@@ -3912,6 +3912,7 @@ function toggleFeedbackGenre(value) {
 function buildFeedbackSectionHtml(record) {
   const feedback = record.feedback || {};
   const selectedGenres = normalizeFeedbackGenreValues(feedback.genre);
+  const totalColor = getScoreColor(record.totalScore);
   return `
     <div class="feedback-card">
       <div class="section-head">
