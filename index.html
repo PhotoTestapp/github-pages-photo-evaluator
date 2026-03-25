@@ -4167,29 +4167,28 @@ async function saveFeedbackForLatest() {
 
   try {
     const payload = buildLearningFeedbackPayload(latestResultRecord, feedback);
-    let localResponse = null;
-    let publicResponse = null;
-    let lastError = null;
-
-    try {
-      localResponse = await apiRequest('/api/ml/feedback', {
+    const [localResult, publicResult] = await Promise.allSettled([
+      apiRequest('/api/ml/feedback', {
         method: 'POST',
         body: payload,
-      });
-    } catch (error) {
-      lastError = error;
-      console.warn('Local feedback save failed', error);
-    }
+      }),
+      saveFeedbackToPublicCollector(payload),
+    ]);
 
-    try {
-      publicResponse = await saveFeedbackToPublicCollector(payload);
-    } catch (error) {
-      lastError = error;
-      console.warn('Public feedback collector save failed', error);
+    const localResponse = localResult.status === 'fulfilled' ? localResult.value : null;
+    const publicResponse = publicResult.status === 'fulfilled' ? publicResult.value : null;
+    const localError = localResult.status === 'rejected' ? localResult.reason : null;
+    const publicError = publicResult.status === 'rejected' ? publicResult.reason : null;
+
+    if (localError) {
+      console.warn('Local feedback save failed', localError);
+    }
+    if (publicError) {
+      console.warn('Public feedback collector save failed', publicError);
     }
 
     if (!localResponse && !publicResponse) {
-      throw lastError || new Error('感想の保存先へ接続できませんでした');
+      throw publicError || localError || new Error('感想の保存先へ接続できませんでした');
     }
 
     const updatedRecord = {
@@ -4218,7 +4217,11 @@ async function saveFeedbackForLatest() {
     } else {
       setFeedbackStatus('精度改善用として保存しました', 'success');
     }
-    await moveToNextUploadAfterFeedback();
+    setTimeout(() => {
+      moveToNextUploadAfterFeedback().catch(error => {
+        console.error(error);
+      });
+    }, 0);
   } catch (error) {
     console.error(error);
     setFeedbackStatus(error.message || '保存に失敗しました', 'error');
