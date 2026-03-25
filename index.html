@@ -2539,7 +2539,7 @@ function renderUploadQueue() {
   }
 
   wrap.classList.add('active');
-  note.textContent = `${uploadQueue.length}枚まで保持できます。一覧から1枚選んで評価・保存します。`;
+  note.textContent = '一覧から1枚選んで評価します。';
   grid.innerHTML = uploadQueue.map(item => `
     <button type="button" class="upload-queue-item ${item.id === currentUploadId ? 'active' : ''}" onclick="selectUploadItem('${escapeHtml(item.id)}')">
       <img class="upload-queue-thumb" src="${item.thumbUrl || item.previewUrl}" alt="${escapeHtml(item.file.name)}" loading="lazy" decoding="async">
