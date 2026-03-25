@@ -3919,8 +3919,8 @@ function buildFeedbackSectionHtml(record) {
       </div>
       <div class="feedback-grid">
         <div class="feedback-field">
-          <label class="field-label" for="feedback-fairness">この結果はイメージに近いですか</label>
-          <div class="segmented-control" role="group" aria-label="この結果はイメージに近いですか">
+          <label class="field-label" for="feedback-fairness">この結果はイメージに近いですか（現在 ${escapeHtml(String(record.totalScore))} 点）</label>
+          <div class="segmented-control" role="group" aria-label="この結果はイメージに近いですか。現在の総合点は${escapeHtml(String(record.totalScore))}点です">
             <button type="button" class="segmented-btn ${feedback.fairness === 'valid' ? 'active' : ''}" aria-pressed="${feedback.fairness === 'valid' ? 'true' : 'false'}" onclick="setSegmentedValue('feedback-fairness', 'valid', event)">妥当</button>
             <button type="button" class="segmented-btn ${feedback.fairness === 'too_high' ? 'active' : ''}" aria-pressed="${feedback.fairness === 'too_high' ? 'true' : 'false'}" onclick="setSegmentedValue('feedback-fairness', 'too_high', event)">高すぎる</button>
             <button type="button" class="segmented-btn ${feedback.fairness === 'too_low' ? 'active' : ''}" aria-pressed="${feedback.fairness === 'too_low' ? 'true' : 'false'}" onclick="setSegmentedValue('feedback-fairness', 'too_low', event)">低すぎる</button>
