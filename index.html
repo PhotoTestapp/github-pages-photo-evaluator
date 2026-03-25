@@ -1873,8 +1873,9 @@ const DEFAULT_PUBLIC_FEEDBACK_COLLECTOR_URL = 'https://script.google.com/macros/
 const DEFAULT_REVIEW_MODE = 'general';
 
 const DB_NAME = 'photo_eval_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'history';
+const SOURCE_IMAGE_STORE_NAME = 'source_images';
 const MAX_HISTORY_ITEMS = 100;
 const HISTORY_RENDER_PAGE_SIZE = 24;
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
@@ -2444,6 +2445,50 @@ function createUploadId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function createImageId() {
+  return `img-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function buildSourceImageRecord(upload) {
+  const sourceState = upload.sourceImageState || {};
+  return {
+    imageId: String(upload.imageId || ''),
+    fileName: upload.file?.name || '',
+    createdAt: upload.createdAt || new Date().toISOString(),
+    // This store is the lightweight linkage layer for original-image tracking.
+    // UI-facing delivery truth remains record.delivery.
+    driveSaveStatus: sourceState.driveSaveStatus || 'not_started',
+    userEvaluationStatus: sourceState.userEvaluationStatus || 'pending',
+    developerEvaluationStatus: sourceState.developerEvaluationStatus || 'pending',
+    driveFileId: sourceState.driveFileId || '',
+    driveUrl: sourceState.driveUrl || '',
+    // Public user data is not eligible for DL training.
+    dlTrainingEligible: false,
+  };
+}
+
+async function saveSourceImageRecord(upload) {
+  if (!upload?.imageId) return;
+  await runStoreOperation('readwrite', store => {
+    store.put(buildSourceImageRecord(upload));
+  }, SOURCE_IMAGE_STORE_NAME);
+}
+
+function persistSourceImageRecord(upload) {
+  saveSourceImageRecord(upload).catch(error => {
+    console.warn('Source image record save failed', error);
+  });
+}
+
+function patchUploadSourceImageState(upload, patch = {}) {
+  if (!upload) return;
+  upload.sourceImageState = {
+    ...(upload.sourceImageState || {}),
+    ...patch,
+  };
+  persistSourceImageRecord(upload);
+}
+
 function getActiveUpload() {
   return uploadQueue.find(item => item.id === currentUploadId) || null;
 }
@@ -2649,6 +2694,8 @@ async function setFiles(files) {
   currentBatchId = `batch-${Date.now()}`;
   uploadQueue = files.map(file => ({
     id: createUploadId(),
+    imageId: createImageId(),
+    createdAt: new Date().toISOString(),
     file,
     previewUrl: URL.createObjectURL(file),
     thumbUrl: '',
@@ -2657,8 +2704,18 @@ async function setFiles(files) {
     evaluationResult: null,
     feedbackDraft: null,
     saveState: 'pending',
+    sourceImageState: {
+      driveSaveStatus: collectDeliverySettings().autoSend ? 'pending' : 'not_started',
+      userEvaluationStatus: 'pending',
+      developerEvaluationStatus: 'pending',
+      driveFileId: '',
+      driveUrl: '',
+    },
   }));
   renderUploadQueue();
+  uploadQueue.forEach(item => {
+    persistSourceImageRecord(item);
+  });
   for (const item of uploadQueue) {
     try {
       item.thumbUrl = await buildQueueThumbnail(item.file);
@@ -3667,6 +3724,7 @@ async function runEvaluation(options = {}) {
     const finalTotalScore = Math.round(Number(mlPrediction.predictedTotalScore ?? ruleBasedScores.totalScore));
     const record = {
       id: Date.now(),
+      imageId: activeUpload.imageId,
       batchId: currentBatchId,
       uploadId: activeUpload.id,
       fileName: fileForEvaluation.name,
@@ -3689,6 +3747,8 @@ async function runEvaluation(options = {}) {
       modelVersion: mlPrediction.modelVersion || '',
       mlScore: mlPrediction.usedModel ? Number(mlPrediction.predictedTotalScore || finalTotalScore) : null,
       scoreGap: round(Math.abs(finalTotalScore - Number(ruleBasedScores.totalScore || 0)), 2),
+      // Public user-side records remain outside DL training data by design.
+      dlTrainingEligible: false,
       feedback: {
         fairness: '',
         commentUsefulness: '',
@@ -3718,6 +3778,9 @@ async function runEvaluation(options = {}) {
     activeUpload.evaluationResult = record;
     activeUpload.feedbackDraft = { ...record.feedback };
     activeUpload.status = 'evaluated';
+    patchUploadSourceImageState(activeUpload, {
+      userEvaluationStatus: 'evaluated',
+    });
     renderUploadQueue();
     latestResultRecord = record;
     await refreshRecordViews(record, { skipVisibleRender: true });
@@ -4009,7 +4072,9 @@ function buildReviewAsset(record) {
 
 function buildLearningFeedbackPayload(record, feedback) {
   return {
+    // Keep imageId as the existing evaluation-record identifier for API compatibility.
     imageId: String(record.id),
+    sourceImageId: String(record.imageId || ''),
     createdAt: record.createdAt,
     fileName: record.fileName || '',
     image_metadata: record.imageMeta || {},
@@ -4045,6 +4110,8 @@ function buildLearningFeedbackPayload(record, feedback) {
     mlScore: record.mlScore,
     scoreGap: record.scoreGap,
     reviewAsset: buildReviewAsset(record),
+    // Public collector / ML feedback is not a DL training source.
+    dlTrainingEligible: false,
     source: window.location.hostname.includes('github.io') ? 'public-pages' : 'local-app',
     originalFileHeader: {
       fileName: record.fileName || '',
@@ -4136,6 +4203,9 @@ async function saveFeedbackForLatest() {
       activeUpload.evaluationResult = updatedRecord;
       activeUpload.feedbackDraft = { ...updatedRecord.feedback };
       activeUpload.status = 'saved';
+      patchUploadSourceImageState(activeUpload, {
+        userEvaluationStatus: 'feedback_saved',
+      });
       renderUploadQueue();
     }
     await refreshRecordViews(updatedRecord);
@@ -4191,16 +4261,20 @@ function openHistoryDb() {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
         store.createIndex('createdAt', 'createdAt', { unique: false });
       }
+      if (!db.objectStoreNames.contains(SOURCE_IMAGE_STORE_NAME)) {
+        const sourceStore = db.createObjectStore(SOURCE_IMAGE_STORE_NAME, { keyPath: 'imageId' });
+        sourceStore.createIndex('createdAt', 'createdAt', { unique: false });
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 }
 
-function runStoreOperation(mode, executor) {
+function runStoreOperation(mode, executor, storeName = STORE_NAME) {
   return openHistoryDb().then(db => new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, mode);
-    const store = transaction.objectStore(STORE_NAME);
+    const transaction = db.transaction(storeName, mode);
+    const store = transaction.objectStore(storeName);
     let resolved = false;
 
     transaction.oncomplete = () => {
@@ -4417,6 +4491,11 @@ async function sendRecordById(id) {
     if (upload) {
       upload.evaluationResult = updatedRecord;
       if (upload.status === 'pending') upload.status = 'evaluated';
+      patchUploadSourceImageState(upload, {
+        driveSaveStatus: 'saved',
+        driveFileId: response.driveFileId || '',
+        driveUrl: response.driveUrl || '',
+      });
       renderUploadQueue();
     }
     await refreshRecordViews(updatedRecord, { skipVisibleRender: true });
@@ -4432,6 +4511,12 @@ async function sendRecordById(id) {
         sendError: error.message || '保存失敗',
       }),
     };
+    const upload = uploadQueue.find(item => item.recordId === id || item.id === record.uploadId);
+    if (upload) {
+      patchUploadSourceImageState(upload, {
+        driveSaveStatus: 'failed',
+      });
+    }
     await refreshRecordViews(updatedRecord, { skipVisibleRender: true });
     showError(error.message || '自動保存に失敗しました');
   } finally {
