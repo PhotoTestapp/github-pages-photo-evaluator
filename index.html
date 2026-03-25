@@ -2962,6 +2962,18 @@ function createCanvasFromImage(image, maxSide = 768) {
   return { canvas, ctx, width, height };
 }
 
+async function buildAnalysisImageBundle(source, maxSide = getAnalysisMaxSide()) {
+  const image = await loadImageElement(source);
+  const { canvas, ctx, width, height } = createCanvasFromImage(image, maxSide);
+  return {
+    originalImage: image,
+    analysisCanvas: canvas,
+    analysisCtx: ctx,
+    analysisWidth: width,
+    analysisHeight: height,
+  };
+}
+
 function extractImageStats(ctx, width, height) {
   const { data } = ctx.getImageData(0, 0, width, height);
   const totalPixels = width * height;
@@ -3299,10 +3311,12 @@ function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
   return { strengthsComment, improvementComment, overallComment };
 }
 
-async function analyzeImageFile(file, preferredSource = '') {
+async function analyzeImageFile(file, preferredSource = '', analysisBundle = null) {
   await new Promise(resolve => requestAnimationFrame(() => resolve()));
-  const image = await loadImageElement(preferredSource || file);
-  const { ctx, width, height } = createCanvasFromImage(image, getAnalysisMaxSide());
+  const bundle = analysisBundle || await buildAnalysisImageBundle(preferredSource || file, getAnalysisMaxSide());
+  const ctx = bundle.analysisCtx;
+  const width = bundle.analysisWidth;
+  const height = bundle.analysisHeight;
   const stats = extractImageStats(ctx, width, height);
   await new Promise(resolve => setTimeout(resolve, 0));
   const spatial = analyzeSpatialFeatures(stats.gray, width, height, stats);
@@ -3692,7 +3706,8 @@ async function runEvaluation(options = {}) {
     const imageData = currentFileDataUrl || await readFileAsDataURL(fileForEvaluation);
     activeUpload.dataUrl = imageData;
     currentFileDataUrl = imageData;
-    const analysis = await analyzeImageFile(fileForEvaluation, imageData);
+    const analysisBundle = await buildAnalysisImageBundle(imageData, getAnalysisMaxSide());
+    const analysis = await analyzeImageFile(fileForEvaluation, imageData, analysisBundle);
     const ruleBasedScores = { ...analysis.scores };
     const featureVector = buildFeatureVector(analysis.metrics, ruleBasedScores);
     const [exifMetadata, originalFileHeaderBase64, mlPrediction, dlGenreResult] = await Promise.all([
