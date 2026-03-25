@@ -1437,8 +1437,9 @@
       linear-gradient(135deg, rgba(79,141,247,0.96), rgba(105,178,255,0.9)),
       linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0));
     color: #fff;
-    border: 1px solid rgba(255,255,255,0.4);
+    border: 1px solid rgba(255,255,255,0.48);
     box-shadow:
+      0 0 0 1px rgba(79,141,247,0.18),
       inset 0 1px 0 rgba(255,255,255,0.3),
       0 16px 32px rgba(79,141,247,0.24);
     backdrop-filter: blur(10px);
@@ -1450,9 +1451,25 @@
       linear-gradient(135deg, rgba(70,131,236,0.98), rgba(90,168,255,0.92)),
       linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0));
     box-shadow:
+      0 0 0 1px rgba(79,141,247,0.22),
       inset 0 1px 0 rgba(255,255,255,0.34),
       0 18px 34px rgba(79,141,247,0.3);
     transform: translateY(-1px);
+  }
+
+  .btn-feedback {
+    border-color: rgba(255,255,255,0.56);
+    box-shadow:
+      0 0 0 1px rgba(79,141,247,0.24),
+      inset 0 1px 0 rgba(255,255,255,0.34),
+      0 18px 36px rgba(79,141,247,0.28);
+  }
+
+  .btn-feedback:hover {
+    box-shadow:
+      0 0 0 1px rgba(79,141,247,0.28),
+      inset 0 1px 0 rgba(255,255,255,0.38),
+      0 20px 38px rgba(79,141,247,0.32);
   }
 
   .segmented-btn {
@@ -1740,7 +1757,7 @@
   <div class="container">
     <h1 class="page-title">写真チェックアプリ</h1>
     <p class="page-sub">写真を選ぶだけで、構図・光・色・技術・主題性・印象を分かりやすくチェックできます。</p>
-    <p class="page-sub note">PUBLIC_UI v2026-03-24-a</p>
+    <p class="page-sub note">PUBLIC_UI v2026-03-26-a</p>
 
     <div id="launch-warning" class="launch-warning"></div>
 
