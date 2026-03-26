@@ -2862,6 +2862,9 @@ async function setFiles(files) {
     evaluationResult: null,
     feedbackDraft: null,
     saveState: 'pending',
+    exifMetadata: null,
+    exifStatus: 'idle',
+    exifPromise: null,
     sourceImageState: {
       driveSaveStatus: collectDeliverySettings().autoSend ? 'pending' : 'not_started',
       userEvaluationStatus: 'pending',
@@ -2873,6 +2876,7 @@ async function setFiles(files) {
   renderUploadQueue();
   uploadQueue.forEach(item => {
     persistSourceImageRecord(item);
+    void preloadExifMetadataForUpload(item);
   });
   for (const item of uploadQueue) {
     try {
@@ -3089,6 +3093,27 @@ async function extractExifMetadataFromFile(file) {
     console.warn('EXIF extraction skipped', error);
   }
   return {};
+}
+
+function preloadExifMetadataForUpload(upload) {
+  if (!upload) return Promise.resolve({});
+  if (upload.exifStatus === 'loading' && upload.exifPromise) return upload.exifPromise;
+  if (upload.exifStatus === 'loaded') return Promise.resolve(upload.exifMetadata || {});
+
+  upload.exifStatus = 'loading';
+  upload.exifPromise = extractExifMetadataFromFile(upload.file)
+    .then(metadata => {
+      upload.exifMetadata = metadata || {};
+      upload.exifStatus = 'loaded';
+      return upload.exifMetadata;
+    })
+    .catch(error => {
+      console.warn('EXIF preload skipped', error);
+      upload.exifMetadata = {};
+      upload.exifStatus = 'failed';
+      return {};
+    });
+  return upload.exifPromise;
 }
 
 async function loadImageElement(source) {
@@ -3867,11 +3892,11 @@ async function runEvaluation(options = {}) {
     const analysis = await analyzeImageFile(fileForEvaluation, imageData, analysisBundle);
     const ruleBasedScores = { ...analysis.scores };
     const featureVector = buildFeatureVector(analysis.metrics, ruleBasedScores);
+    const exifMetadataPromise = activeUpload.exifPromise
+      ? activeUpload.exifPromise
+      : preloadExifMetadataForUpload(activeUpload);
     const [exifMetadata, originalFileHeaderBase64, mlPrediction, dlGenreResult] = await Promise.all([
-      extractExifMetadataFromFile(fileForEvaluation).catch(error => {
-        console.warn('EXIF extraction skipped', error);
-        return {};
-      }),
+      exifMetadataPromise,
       readFileHeadAsBase64(fileForEvaluation).catch(error => {
         console.warn('Header extraction skipped', error);
         return '';
