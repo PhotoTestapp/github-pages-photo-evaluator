@@ -4381,7 +4381,8 @@ async function saveFeedbackForLatest() {
       });
       renderUploadQueue();
     }
-    void refreshRecordViews(updatedRecord, { skipVisibleRender: true }).catch(error => {
+    await saveToHistory(updatedRecord);
+    void renderHistory().catch(error => {
       console.error(error);
     });
     if (localResponse && publicResponse) {
