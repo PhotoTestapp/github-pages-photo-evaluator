@@ -2865,6 +2865,9 @@ async function setFiles(files) {
     exifMetadata: null,
     exifStatus: 'idle',
     exifPromise: null,
+    dlCategoryImageDataUrl: '',
+    dlCategoryStatus: 'idle',
+    dlCategoryPromise: null,
     sourceImageState: {
       driveSaveStatus: collectDeliverySettings().autoSend ? 'pending' : 'not_started',
       userEvaluationStatus: 'pending',
@@ -2877,6 +2880,7 @@ async function setFiles(files) {
   uploadQueue.forEach(item => {
     persistSourceImageRecord(item);
     void preloadExifMetadataForUpload(item);
+    void preloadDlCategoryImageDataForUpload(item);
   });
   for (const item of uploadQueue) {
     try {
@@ -3114,6 +3118,31 @@ function preloadExifMetadataForUpload(upload) {
       return {};
     });
   return upload.exifPromise;
+}
+
+
+function preloadDlCategoryImageDataForUpload(upload) {
+  if (!upload) return Promise.resolve('');
+  if (upload.dlCategoryStatus === 'loading' && upload.dlCategoryPromise) return upload.dlCategoryPromise;
+  if (upload.dlCategoryStatus === 'loaded' && upload.dlCategoryImageDataUrl) {
+    return Promise.resolve(upload.dlCategoryImageDataUrl);
+  }
+
+  upload.dlCategoryStatus = 'loading';
+  const source = upload.dataUrl || upload.previewUrl;
+  upload.dlCategoryPromise = buildDlCategoryImageDataUrl(source)
+    .then(dataUrl => {
+      upload.dlCategoryImageDataUrl = dataUrl || '';
+      upload.dlCategoryStatus = 'loaded';
+      return upload.dlCategoryImageDataUrl;
+    })
+    .catch(error => {
+      console.warn('DL category image preload skipped', error);
+      upload.dlCategoryImageDataUrl = '';
+      upload.dlCategoryStatus = 'failed';
+      return '';
+    });
+  return upload.dlCategoryPromise;
 }
 
 async function loadImageElement(source) {
@@ -3633,8 +3662,8 @@ function mapDlPredictedScoresToRuleShape(predictedScores = {}, fallbackScores = 
   return mapped;
 }
 
-async function requestDlEstimatedGenre(imageSource, analysis) {
-  const dlImageDataUrl = await buildDlCategoryImageDataUrl(imageSource);
+async function requestDlEstimatedGenre(imageSource, analysis, options = {}) {
+  const dlImageDataUrl = options.prebuiltImageDataUrl || await buildDlCategoryImageDataUrl(imageSource);
   const response = await withTimeout(
     fetch(`${DEFAULT_DL_CATEGORY_API_BASE}/api/dl/predict`, {
       method: 'POST',
@@ -3895,6 +3924,9 @@ async function runEvaluation(options = {}) {
     const exifMetadataPromise = activeUpload.exifPromise
       ? activeUpload.exifPromise
       : preloadExifMetadataForUpload(activeUpload);
+    const dlCategoryImagePromise = activeUpload.dlCategoryPromise
+      ? activeUpload.dlCategoryPromise
+      : preloadDlCategoryImageDataForUpload(activeUpload);
     const [exifMetadata, originalFileHeaderBase64, mlPrediction, dlGenreResult] = await Promise.all([
       exifMetadataPromise,
       readFileHeadAsBase64(fileForEvaluation).catch(error => {
@@ -3910,7 +3942,9 @@ async function runEvaluation(options = {}) {
           predictedTotalScore: ruleBasedScores.totalScore,
         };
       }),
-      requestDlEstimatedGenre(imageData, analysis).catch(error => {
+      dlCategoryImagePromise.then(prebuiltImageDataUrl => requestDlEstimatedGenre(imageData, analysis, {
+        prebuiltImageDataUrl,
+      })).catch(error => {
         console.warn('DL genre prediction unavailable', error);
         return {
           genre: estimateGenreFromMetrics(analysis.metrics, ruleBasedScores),
