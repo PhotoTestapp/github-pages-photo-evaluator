@@ -1936,6 +1936,7 @@
 </div>
 
 
+<script src="./public-score-engine.js"></script>
 <script>
 const SCORE_ITEMS = [
   { label: '構図', key: 'compositionScore', icon: '🖼️' },
@@ -3447,6 +3448,19 @@ function deriveScoresFromMetrics(metrics) {
   };
 }
 
+function evaluateScoresForPublicApp(metrics) {
+  if (window.PhotoEvalScoreEngine && typeof window.PhotoEvalScoreEngine.evaluatePhotoScores === 'function') {
+    return window.PhotoEvalScoreEngine.evaluatePhotoScores(metrics, {
+      legacyEvaluator: deriveScoresFromMetrics,
+    });
+  }
+  return {
+    activeEngine: 'legacy',
+    scores: deriveScoresFromMetrics(metrics),
+    shadowScores: null,
+  };
+}
+
 function buildImprovementSignals(metrics, scores) {
   const signals = [];
   if (metrics.overexposedRatio > 0.08) signals.push('白飛びが目立ちます');
@@ -3549,11 +3563,19 @@ async function analyzeImageFile(file, preferredSource = '', analysisBundle = nul
     faceDetectionSupported: false,
   };
 
-  const scores = deriveScoresFromMetrics(metrics);
+  const evaluation = evaluateScoresForPublicApp(metrics);
+  const scores = evaluation.scores;
   const improvementSignals = buildImprovementSignals(metrics, scores);
   const comments = generateCommentsFromAnalysis(scores, metrics, improvementSignals);
 
-  return { scores, metrics, improvementSignals, comments };
+  return {
+    scores,
+    metrics,
+    improvementSignals,
+    comments,
+    evaluationEngine: evaluation.activeEngine,
+    shadowScores: evaluation.shadowScores,
+  };
 }
 
 function buildFeatureVector(metrics, scores) {
