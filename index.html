@@ -1779,7 +1779,7 @@
   <div class="container">
     <h1 class="page-title">写真チェックアプリ</h1>
     <p class="page-sub">写真を選ぶだけで、構図・光・色・技術・主題性・印象を分かりやすくチェックできます。</p>
-    <p class="page-sub note">PUBLIC_UI v2026-03-26-a</p>
+    <p class="page-sub note">PUBLIC_UI v2026-03-27-a（a:画面 / b:統計 / c:内部）</p>
 
     <div id="launch-warning" class="launch-warning"></div>
 
@@ -2246,7 +2246,13 @@ function renderPublicStats(stats = {}) {
 
   const note = document.getElementById('public-stats-note');
   const generatedAt = formatStatsGeneratedAt(stats.generatedAt);
-  note.textContent = generatedAt ? `${generatedAt} 時点の統計` : '';
+  const totalRecords = Number(stats.summary?.totalRecords || 0) || 0;
+  const sampleCount = Number(stats.sampleCount || 0) || 0;
+  const noteParts = [];
+  if (generatedAt) noteParts.push(`${generatedAt} 時点の統計`);
+  if (totalRecords) noteParts.push(`総件数 ${totalRecords}件`);
+  if (sampleCount) noteParts.push(`モデル反映 ${sampleCount}件`);
+  note.textContent = noteParts.join(' / ');
 }
 
 async function loadPublicStats() {
@@ -2781,6 +2787,9 @@ function showPage(name) {
   document.getElementById(`page-${name}`).classList.add('active');
   const tabIndexMap = { evaluate: 0, stats: 1, history: 2 };
   document.querySelectorAll('.tab-btn')[tabIndexMap[name] ?? 0].classList.add('active');
+  if (name === 'stats') {
+    void loadPublicStats();
+  }
   if (name === 'history') {
     historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
     void renderHistory();
@@ -2865,9 +2874,6 @@ async function setFiles(files) {
     exifMetadata: null,
     exifStatus: 'idle',
     exifPromise: null,
-    dlCategoryImageDataUrl: '',
-    dlCategoryStatus: 'idle',
-    dlCategoryPromise: null,
     sourceImageState: {
       driveSaveStatus: collectDeliverySettings().autoSend ? 'pending' : 'not_started',
       userEvaluationStatus: 'pending',
@@ -2880,7 +2886,6 @@ async function setFiles(files) {
   uploadQueue.forEach(item => {
     persistSourceImageRecord(item);
     void preloadExifMetadataForUpload(item);
-    void preloadDlCategoryImageDataForUpload(item);
   });
   for (const item of uploadQueue) {
     try {
@@ -3118,31 +3123,6 @@ function preloadExifMetadataForUpload(upload) {
       return {};
     });
   return upload.exifPromise;
-}
-
-
-function preloadDlCategoryImageDataForUpload(upload) {
-  if (!upload) return Promise.resolve('');
-  if (upload.dlCategoryStatus === 'loading' && upload.dlCategoryPromise) return upload.dlCategoryPromise;
-  if (upload.dlCategoryStatus === 'loaded' && upload.dlCategoryImageDataUrl) {
-    return Promise.resolve(upload.dlCategoryImageDataUrl);
-  }
-
-  upload.dlCategoryStatus = 'loading';
-  const source = upload.dataUrl || upload.previewUrl;
-  upload.dlCategoryPromise = buildDlCategoryImageDataUrl(source)
-    .then(dataUrl => {
-      upload.dlCategoryImageDataUrl = dataUrl || '';
-      upload.dlCategoryStatus = 'loaded';
-      return upload.dlCategoryImageDataUrl;
-    })
-    .catch(error => {
-      console.warn('DL category image preload skipped', error);
-      upload.dlCategoryImageDataUrl = '';
-      upload.dlCategoryStatus = 'failed';
-      return '';
-    });
-  return upload.dlCategoryPromise;
 }
 
 async function loadImageElement(source) {
@@ -3662,8 +3642,8 @@ function mapDlPredictedScoresToRuleShape(predictedScores = {}, fallbackScores = 
   return mapped;
 }
 
-async function requestDlEstimatedGenre(imageSource, analysis, options = {}) {
-  const dlImageDataUrl = options.prebuiltImageDataUrl || await buildDlCategoryImageDataUrl(imageSource);
+async function requestDlEstimatedGenre(imageSource, analysis) {
+  const dlImageDataUrl = await buildDlCategoryImageDataUrl(imageSource);
   const response = await withTimeout(
     fetch(`${DEFAULT_DL_CATEGORY_API_BASE}/api/dl/predict`, {
       method: 'POST',
@@ -3924,9 +3904,6 @@ async function runEvaluation(options = {}) {
     const exifMetadataPromise = activeUpload.exifPromise
       ? activeUpload.exifPromise
       : preloadExifMetadataForUpload(activeUpload);
-    const dlCategoryImagePromise = activeUpload.dlCategoryPromise
-      ? activeUpload.dlCategoryPromise
-      : preloadDlCategoryImageDataForUpload(activeUpload);
     const [exifMetadata, originalFileHeaderBase64, mlPrediction, dlGenreResult] = await Promise.all([
       exifMetadataPromise,
       readFileHeadAsBase64(fileForEvaluation).catch(error => {
@@ -3942,9 +3919,7 @@ async function runEvaluation(options = {}) {
           predictedTotalScore: ruleBasedScores.totalScore,
         };
       }),
-      dlCategoryImagePromise.then(prebuiltImageDataUrl => requestDlEstimatedGenre(imageData, analysis, {
-        prebuiltImageDataUrl,
-      })).catch(error => {
+      requestDlEstimatedGenre(imageData, analysis).catch(error => {
         console.warn('DL genre prediction unavailable', error);
         return {
           genre: estimateGenreFromMetrics(analysis.metrics, ruleBasedScores),
