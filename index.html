@@ -1988,6 +1988,7 @@ const STORAGE_KEYS = {
   deliverySettings: 'photo_eval_delivery_settings',
   mlApiBase: 'photo_eval_ml_api_base',
   publicFeedbackCollectorUrl: 'photo_eval_public_feedback_collector_url',
+  anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
@@ -2071,6 +2072,28 @@ function clamp(value, min, max) {
 function round(value, digits = 0) {
   const scale = 10 ** digits;
   return Math.round(value * scale) / scale;
+}
+
+function generateAnonymousUserId() {
+  if (window.crypto?.randomUUID) {
+    return `anon_${window.crypto.randomUUID()}`;
+  }
+  return `anon_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getAnonymousUserId() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.anonymousUserId);
+    if (stored && /^anon_[a-z0-9-]+$/i.test(stored)) {
+      return stored;
+    }
+    const nextId = generateAnonymousUserId();
+    localStorage.setItem(STORAGE_KEYS.anonymousUserId, nextId);
+    return nextId;
+  } catch (error) {
+    console.warn('Anonymous user ID storage unavailable', error);
+    return generateAnonymousUserId();
+  }
 }
 
 function isMobileLikeDevice() {
@@ -3951,8 +3974,10 @@ async function runEvaluation(options = {}) {
     ]);
 
     const finalTotalScore = Math.round(Number(mlPrediction.predictedTotalScore ?? ruleBasedScores.totalScore));
+    const anonymousUserId = getAnonymousUserId();
     const record = {
       id: Date.now(),
+      anonymousUserId,
       imageId: activeUpload.imageId,
       batchId: currentBatchId,
       uploadId: activeUpload.id,
@@ -4304,6 +4329,7 @@ function buildLearningFeedbackPayload(record, feedback) {
   return {
     // Keep imageId as the existing evaluation-record identifier for API compatibility.
     imageId: String(record.id),
+    anonymousUserId: String(record.anonymousUserId || getAnonymousUserId()),
     sourceImageId: String(record.imageId || ''),
     createdAt: record.createdAt,
     fileName: record.fileName || '',
