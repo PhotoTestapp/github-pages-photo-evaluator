@@ -1779,7 +1779,7 @@
   <div class="container">
     <h1 class="page-title">写真チェックアプリ</h1>
     <p class="page-sub">写真を選ぶだけで、構図・光・色・技術・主題性・印象を分かりやすくチェックできます。</p>
-    <p class="page-sub note">PUBLIC_UI v2026-03-27-a（a:画面 / b:統計 / c:内部）</p>
+    <p class="page-sub note" id="public-ui-version-label"></p>
 
     <div id="launch-warning" class="launch-warning"></div>
 
@@ -1990,6 +1990,8 @@ const STORAGE_KEYS = {
   publicFeedbackCollectorUrl: 'photo_eval_public_feedback_collector_url',
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
+// Update this label whenever the public UI changes.
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-03-27-a（a:画面 / b:統計 / c:内部）';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -2072,6 +2074,12 @@ function clamp(value, min, max) {
 function round(value, digits = 0) {
   const scale = 10 ** digits;
   return Math.round(value * scale) / scale;
+}
+
+function renderPublicUiVersionLabel() {
+  const label = document.getElementById('public-ui-version-label');
+  if (!label) return;
+  label.textContent = PUBLIC_UI_VERSION;
 }
 
 function generateAnonymousUserId() {
@@ -2271,10 +2279,12 @@ function renderPublicStats(stats = {}) {
   const note = document.getElementById('public-stats-note');
   const generatedAt = formatStatsGeneratedAt(stats.generatedAt);
   const totalRecords = Number(stats.summary?.totalRecords || 0) || 0;
+  const estimatedUserCount = Number(stats.summary?.estimatedUserCount || 0) || 0;
   const sampleCount = Number(stats.sampleCount || 0) || 0;
   const noteParts = [];
   if (generatedAt) noteParts.push(`${generatedAt} 時点の統計`);
   if (totalRecords) noteParts.push(`総件数 ${totalRecords}件`);
+  if (estimatedUserCount) noteParts.push(`想定ユーザー数 ${estimatedUserCount}人`);
   if (sampleCount) noteParts.push(`モデル反映 ${sampleCount}件`);
   note.textContent = noteParts.join(' / ');
 }
@@ -2655,11 +2665,71 @@ function buildSourceImageRecord(upload) {
   };
 }
 
+function buildHistoryAssetRecord(record) {
+  return {
+    imageId: String(record.imageId || ''),
+    fileName: record.fileName || '',
+    createdAt: record.createdAt || new Date().toISOString(),
+    imageSrc: record.imageSrc || '',
+    originalFileHeaderBase64: record.originalFileHeaderBase64 || '',
+  };
+}
+
+function buildHistoryStorageRecord(record) {
+  return {
+    ...record,
+    imageSrc: '',
+    originalFileHeaderBase64: '',
+  };
+}
+
 async function saveSourceImageRecord(upload) {
   if (!upload?.imageId) return;
   await runStoreOperation('readwrite', store => {
     store.put(buildSourceImageRecord(upload));
   }, SOURCE_IMAGE_STORE_NAME);
+}
+
+async function saveHistoryAssetRecord(record) {
+  if (!record?.imageId) return;
+  await runStoreOperation('readwrite', store => {
+    store.put({
+      ...(buildHistoryAssetRecord(record)),
+      ...(buildSourceImageRecord({
+        imageId: record.imageId,
+        createdAt: record.createdAt,
+        file: { name: record.fileName || '' },
+        sourceImageState: {
+          driveSaveStatus: record.delivery?.savedToDrive ? 'saved' : 'not_started',
+          userEvaluationStatus: record.feedback?.savedAt ? 'feedback_saved' : 'evaluated',
+          developerEvaluationStatus: 'pending',
+          driveFileId: record.delivery?.driveFileId || '',
+          driveUrl: record.delivery?.driveUrl || '',
+        },
+      })),
+    });
+  }, SOURCE_IMAGE_STORE_NAME);
+}
+
+async function loadHistoryAssetRecord(imageId) {
+  if (!imageId) return null;
+  return runStoreOperation('readonly', (store, resolve, reject) => {
+    const request = store.get(String(imageId));
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  }, SOURCE_IMAGE_STORE_NAME);
+}
+
+async function hydrateHistoryRecord(record) {
+  if (!record) return null;
+  if (record.imageSrc && record.originalFileHeaderBase64) return record;
+  const asset = await loadHistoryAssetRecord(record.imageId);
+  if (!asset) return record;
+  return {
+    ...record,
+    imageSrc: record.imageSrc || asset.imageSrc || '',
+    originalFileHeaderBase64: record.originalFileHeaderBase64 || asset.originalFileHeaderBase64 || '',
+  };
 }
 
 function persistSourceImageRecord(upload) {
@@ -4506,12 +4576,35 @@ async function exportLearningData(format) {
 }
 
 async function saveToHistory(record) {
-  const history = await loadHistory();
-  const next = [record, ...history.filter(item => item.id !== record.id)].slice(0, MAX_HISTORY_ITEMS);
-  await runStoreOperation('readwrite', store => {
-    next.forEach(item => store.put(item));
-    history.filter(item => !next.some(saved => saved.id === item.id)).forEach(item => store.delete(item.id));
+  const slimRecord = buildHistoryStorageRecord(record);
+  await saveHistoryAssetRecord(record);
+  const overflowImageIds = await runStoreOperation('readwrite', (store, resolve, reject) => {
+    const index = store.index('createdAt');
+    store.put(slimRecord);
+
+    const overflowImageIds = [];
+    const cursorRequest = index.openCursor(null, 'prev');
+    let seen = 0;
+    cursorRequest.onsuccess = event => {
+      const cursor = event.target.result;
+      if (!cursor) {
+        resolve(overflowImageIds);
+        return;
+      }
+      seen += 1;
+      if (seen > MAX_HISTORY_ITEMS) {
+        overflowImageIds.push(String(cursor.value?.imageId || ''));
+        cursor.delete();
+      }
+      cursor.continue();
+    };
+    cursorRequest.onerror = () => reject(cursorRequest.error);
   });
+  if (Array.isArray(overflowImageIds) && overflowImageIds.length) {
+    await runStoreOperation('readwrite', store => {
+      overflowImageIds.filter(Boolean).forEach(imageId => store.delete(imageId));
+    }, SOURCE_IMAGE_STORE_NAME);
+  }
 }
 
 function openHistoryDb() {
@@ -4575,14 +4668,28 @@ async function loadHistory() {
 }
 
 async function getRecordById(id) {
-  const history = await loadHistory();
-  return history.find(record => record.id === id) || null;
+  const record = await runStoreOperation('readonly', (store, resolve, reject) => {
+    const request = store.get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
+  return hydrateHistoryRecord(record);
 }
 
 async function deleteFromHistory(id) {
+  const record = await runStoreOperation('readonly', (store, resolve, reject) => {
+    const request = store.get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
   await runStoreOperation('readwrite', store => {
     store.delete(id);
   });
+  if (record?.imageId) {
+    await runStoreOperation('readwrite', store => {
+      store.delete(String(record.imageId));
+    }, SOURCE_IMAGE_STORE_NAME);
+  }
 }
 
 async function clearAllHistory() {
@@ -4590,6 +4697,9 @@ async function clearAllHistory() {
   await runStoreOperation('readwrite', store => {
     store.clear();
   });
+  await runStoreOperation('readwrite', store => {
+    store.clear();
+  }, SOURCE_IMAGE_STORE_NAME);
   latestResultRecord = null;
   modalRecordId = null;
   updateActionLinks();
@@ -4796,6 +4906,7 @@ async function sendLatestRecord() {
 }
 
 applyDeliverySettings();
+renderPublicUiVersionLabel();
 updateLaunchWarning();
 document.body.classList.toggle('mobile-lite', isMobileLikeDevice());
 setupPullToRefreshGuard();
