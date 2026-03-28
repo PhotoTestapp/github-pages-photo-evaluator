@@ -186,6 +186,9 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
   }
+  .public-stats-mobile-tabs {
+    display: none;
+  }
   .public-chart-card {
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -1097,9 +1100,67 @@
 
   /* レスポンシブ */
   @media (max-width: 600px) {
+    #page-stats .container {
+      min-height: calc(100vh - 56px);
+      padding-bottom: 24px;
+    }
+    .public-stats-panel {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      min-height: calc(100vh - 148px);
+    }
+    .public-stats-mobile-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .public-stats-mobile-tab {
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+      border-radius: 10px;
+      padding: 9px 8px;
+      font: inherit;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+    .public-stats-mobile-tab.active {
+      background: var(--accent);
+      color: #0f0f11;
+      border-color: transparent;
+    }
     .public-stats-grid { grid-template-columns: 1fr; }
+    .public-chart-card {
+      display: none;
+      padding: 12px;
+      min-height: 0;
+    }
+    .public-chart-card.active {
+      display: block;
+    }
+    .public-chart-title {
+      font-size: 0.78rem;
+      margin-bottom: 8px;
+    }
     .public-bar-row { grid-template-columns: 64px 1fr 34px; }
-    .public-histogram { gap: 6px; }
+    .public-bar-chart {
+      gap: 6px;
+    }
+    .public-histogram {
+      gap: 5px;
+      min-height: 132px;
+    }
+    .public-histogram-bar-wrap {
+      height: 84px;
+    }
+    .public-histogram-value {
+      font-size: 0.62rem;
+    }
+    .public-histogram-label {
+      font-size: 0.56rem;
+      line-height: 1.15;
+    }
     .scores-grid { grid-template-columns: 1fr 1fr; }
     #history-grid { grid-template-columns: 1fr 1fr; }
     .container { padding: 24px 16px 60px; }
@@ -1879,8 +1940,13 @@
           <p class="public-stats-note" id="public-stats-note"></p>
         </div>
       </div>
+      <div class="public-stats-mobile-tabs" id="public-stats-mobile-tabs">
+        <button type="button" class="public-stats-mobile-tab active" onclick="showPublicStatsCard(0)">総合点</button>
+        <button type="button" class="public-stats-mobile-tab" onclick="showPublicStatsCard(1)">カテゴリ</button>
+        <button type="button" class="public-stats-mobile-tab" onclick="showPublicStatsCard(2)">項目別</button>
+      </div>
       <div class="public-stats-grid">
-        <article class="public-chart-card">
+        <article class="public-chart-card active">
           <h2 class="public-chart-title">総合点ヒストグラム</h2>
           <div id="public-score-histogram" class="public-histogram"></div>
         </article>
@@ -2287,6 +2353,17 @@ function renderPublicStats(stats = {}) {
   if (estimatedUserCount) noteParts.push(`想定ユーザー数 ${estimatedUserCount}人`);
   if (sampleCount) noteParts.push(`モデル反映 ${sampleCount}件`);
   note.textContent = noteParts.join(' / ');
+}
+
+function showPublicStatsCard(index = 0) {
+  const cards = Array.from(document.querySelectorAll('#public-stats-panel .public-chart-card'));
+  const tabs = Array.from(document.querySelectorAll('#public-stats-mobile-tabs .public-stats-mobile-tab'));
+  cards.forEach((card, cardIndex) => {
+    card.classList.toggle('active', cardIndex === index);
+  });
+  tabs.forEach((tab, tabIndex) => {
+    tab.classList.toggle('active', tabIndex === index);
+  });
 }
 
 async function loadPublicStats() {
