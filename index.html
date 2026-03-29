@@ -1359,6 +1359,12 @@
     padding: 16px;
     box-shadow: 0 8px 20px rgba(126,148,184,0.08);
   }
+  .step-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
   .step-num {
     display: inline-flex;
     align-items: center;
@@ -1366,17 +1372,16 @@
     width: 28px;
     height: 28px;
     border-radius: 999px;
-    background: #eaf2ff;
-    color: #2f76ea;
+    background: #edf3ff;
+    color: #5f7eb5;
     font-weight: 800;
-    font-size: 0.88rem;
-    margin-bottom: 10px;
+    font-size: 0.86rem;
+    flex: 0 0 auto;
   }
-  .step-card strong {
-    display: block;
+  .step-title {
     color: #213451;
-    margin-bottom: 4px;
     font-size: 0.95rem;
+    font-weight: 700;
     white-space: nowrap;
   }
   .step-card span {
@@ -1833,19 +1838,25 @@
     <section class="welcome-panel">
       <div class="step-grid">
         <article class="step-card">
-          <span class="step-num">1</span>
-          <h3>画像を選ぶ</h3>
-          <p>スマホやパソコンにある写真を選ぶだけです。</p>
+          <div class="step-heading">
+            <span class="step-num">1</span>
+            <strong class="step-title">画像を選ぶ</strong>
+          </div>
+          <span>スマホやパソコンにある写真を選ぶだけです。</span>
         </article>
         <article class="step-card">
-          <span class="step-num">2</span>
-          <h3>チェックする</h3>
-          <p>構図や光のバランスなどを自動で確認して、総合点と項目ごとに結果を表示します。</p>
+          <div class="step-heading">
+            <span class="step-num">2</span>
+            <strong class="step-title">チェックする</strong>
+          </div>
+          <span>構図や光のバランスなどを自動で確認して、総合点と項目ごとに結果を表示します。</span>
         </article>
         <article class="step-card">
-          <span class="step-num">3</span>
-          <h3>結果を見る</h3>
-          <p>結果を見て、気になる点を確認できます。</p>
+          <div class="step-heading">
+            <span class="step-num">3</span>
+            <strong class="step-title">結果を見る</strong>
+          </div>
+          <span>結果を見て、気になる点を確認できます。</span>
         </article>
       </div>
     </section>
