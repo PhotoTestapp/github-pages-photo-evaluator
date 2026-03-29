@@ -2106,6 +2106,7 @@ const MAX_BATCH_UPLOADS = 5;
 const DELIVERY_MAX_SIDE = 1920;
 const ANALYSIS_MAX_SIDE_DESKTOP = 640;
 const ANALYSIS_MAX_SIDE_MOBILE = 384;
+const ANALYSIS_MAX_SIDE_MOBILE_AUTONEXT = 256;
 const BROWSER_ML_MODEL_PATH = './photo_eval_model.json';
 
 let currentFile = null;
@@ -2857,7 +2858,10 @@ async function moveToNextUploadAfterFeedback() {
   try {
     await selectUploadItem(nextUpload.id);
     if (!nextUpload.evaluationResult) {
-      await runEvaluation();
+      await runEvaluation({
+        maxSideOverride: isMobileLikeDevice() ? ANALYSIS_MAX_SIDE_MOBILE_AUTONEXT : undefined,
+        loadingMessage: isMobileLikeDevice() ? '次の写真を軽量モードで確認しています...' : '写真を確認しています...',
+      });
     }
     return true;
   } finally {
@@ -4156,6 +4160,7 @@ async function runEvaluation(options = {}) {
 
   const suppressIntermediateRender = Boolean(options.suppressIntermediateRender);
   const loadingMessage = options.loadingMessage || '写真を確認しています...';
+  const analysisMaxSide = Number(options.maxSideOverride || getAnalysisMaxSide()) || getAnalysisMaxSide();
 
   const evalButton = document.getElementById('eval-btn');
   const loading = document.getElementById('loading');
@@ -4175,7 +4180,7 @@ async function runEvaluation(options = {}) {
     const imageData = currentFileDataUrl || await readFileAsDataURL(fileForEvaluation);
     activeUpload.dataUrl = imageData;
     currentFileDataUrl = imageData;
-    const analysisBundle = await buildAnalysisImageBundle(imageData, getAnalysisMaxSide());
+    const analysisBundle = await buildAnalysisImageBundle(imageData, analysisMaxSide);
     const analysis = await analyzeImageFile(fileForEvaluation, imageData, analysisBundle);
     const ruleBasedScores = { ...analysis.scores };
     const featureVector = buildFeatureVector(analysis.metrics, ruleBasedScores);
