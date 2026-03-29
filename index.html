@@ -2121,6 +2121,7 @@ let historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
 let historyNeedsRender = true;
 let isAutoMovingToNextUpload = false;
 let isEvaluationRunning = false;
+let isProcessingSourceUploads = false;
 let browserMlModelPromise = null;
 let mlRuntimeState = {
   mode: 'Rule-based',
@@ -2929,6 +2930,10 @@ async function selectUploadItem(uploadId) {
   renderUploadQueue();
   updateActionLinks(upload.evaluationResult || null);
   hideError();
+  if (upload.exifStatus === 'idle') {
+    void preloadExifMetadataForUpload(upload);
+  }
+  void processPendingSourceUploads();
 }
 
 function updateActionLinks(record = null) {
@@ -3065,8 +3070,6 @@ async function setFiles(files) {
   renderUploadQueue();
   uploadQueue.forEach(item => {
     persistSourceImageRecord(item);
-    void preloadExifMetadataForUpload(item);
-    void autoUploadSourceImageToDrive(item);
   });
   for (const item of uploadQueue) {
     try {
@@ -3079,6 +3082,7 @@ async function setFiles(files) {
     }
   }
   await selectUploadItem(uploadQueue[0].id);
+  void processPendingSourceUploads();
 }
 
 function resetFile() {
@@ -4097,6 +4101,22 @@ async function autoUploadSourceImageToDrive(upload) {
     patchUploadSourceImageState(upload, { driveSaveStatus: 'failed' });
   } finally {
     renderUploadQueue();
+  }
+}
+
+async function processPendingSourceUploads() {
+  if (isProcessingSourceUploads || !collectDeliverySettings().autoSend) return;
+  isProcessingSourceUploads = true;
+  try {
+    for (const upload of uploadQueue) {
+      if (!uploadQueue.some(item => item.id === upload.id)) continue;
+      const state = upload.sourceImageState || {};
+      if (state.driveSaveStatus === 'saved' || state.driveSaveStatus === 'sending') continue;
+      await autoUploadSourceImageToDrive(upload);
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  } finally {
+    isProcessingSourceUploads = false;
   }
 }
 
