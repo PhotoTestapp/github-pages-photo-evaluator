@@ -2118,6 +2118,7 @@ let uploadQueue = [];
 let currentUploadId = null;
 let currentBatchId = '';
 let historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
+let historyNeedsRender = true;
 let browserMlModelPromise = null;
 let mlRuntimeState = {
   mode: 'Rule-based',
@@ -2957,8 +2958,13 @@ function showPage(name) {
     void loadPublicStats();
   }
   if (name === 'history') {
-    historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
-    void renderHistory();
+    if (historyRenderLimit < HISTORY_RENDER_PAGE_SIZE) {
+      historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
+      historyNeedsRender = true;
+    }
+    if (historyNeedsRender) {
+      void renderHistory();
+    }
   }
 }
 
@@ -4775,6 +4781,7 @@ async function clearAllHistory() {
   latestResultRecord = null;
   modalRecordId = null;
   updateActionLinks();
+  historyNeedsRender = true;
   await renderHistory();
 }
 
@@ -4812,6 +4819,7 @@ async function renderHistory() {
     if (!history.length) {
       grid.innerHTML = '';
       empty.style.display = 'block';
+      historyNeedsRender = false;
       return;
     }
     empty.style.display = 'none';
@@ -4825,6 +4833,7 @@ async function renderHistory() {
         </button>
       ` : ''}
     `;
+    historyNeedsRender = false;
   } catch (error) {
     console.error(error);
     showError('履歴の読み込みに失敗しました');
@@ -4833,6 +4842,7 @@ async function renderHistory() {
 
 function loadMoreHistoryItems() {
   historyRenderLimit += HISTORY_RENDER_PAGE_SIZE;
+  historyNeedsRender = true;
   void renderHistory();
 }
 
@@ -4848,6 +4858,7 @@ async function deleteRecord(id, event) {
     closeModalDirect();
   }
   updateActionLinks(latestResultRecord);
+  historyNeedsRender = true;
   await renderHistory();
 }
 
@@ -4883,6 +4894,7 @@ async function refreshRecordViews(record, options = {}) {
   if (!skipVisibleRender && modalRecordId === record.id) {
     renderModalRecord(record);
   }
+  historyNeedsRender = true;
   await renderHistory();
 }
 
