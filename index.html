@@ -2891,6 +2891,7 @@ function renderUploadQueue() {
       <div class="upload-queue-status">${escapeHtml(getUploadStatusLabel(item))}</div>
     </button>
   `).join('');
+  updateEvalButtonState();
 }
 
 function applyFeedbackDraftToForm(draft = {}) {
@@ -2907,6 +2908,27 @@ function persistCurrentFeedbackDraft() {
   activeUpload.feedbackDraft = collectFeedbackFormValues();
 }
 
+function isUploadReadyForEvaluation(upload) {
+  if (!upload) return false;
+  const exifReady = upload.exifStatus === 'loaded' || upload.exifStatus === 'failed';
+  const sourceState = upload.sourceImageState || {};
+  const driveReady = !collectDeliverySettings().autoSend
+    || sourceState.driveSaveStatus === 'saved'
+    || sourceState.driveSaveStatus === 'failed'
+    || sourceState.driveSaveStatus === 'not_started';
+  return exifReady && driveReady;
+}
+
+function updateEvalButtonState(upload = getActiveUpload()) {
+  const evalButton = document.getElementById('eval-btn');
+  if (!evalButton) return;
+  if (isEvaluationRunning) {
+    evalButton.disabled = true;
+    return;
+  }
+  evalButton.disabled = !isUploadReadyForEvaluation(upload);
+}
+
 async function selectUploadItem(uploadId) {
   persistCurrentFeedbackDraft();
   const upload = uploadQueue.find(item => item.id === uploadId);
@@ -2920,7 +2942,7 @@ async function selectUploadItem(uploadId) {
   document.getElementById('preview-name').textContent = upload.file.name;
   document.getElementById('dropzone').style.display = 'none';
   document.getElementById('preview-wrap').style.display = 'none';
-  document.getElementById('eval-btn').disabled = false;
+  updateEvalButtonState(upload);
 
   if (upload.evaluationResult) {
     latestResultRecord = upload.evaluationResult;
@@ -3303,12 +3325,14 @@ function preloadExifMetadataForUpload(upload) {
     .then(metadata => {
       upload.exifMetadata = metadata || {};
       upload.exifStatus = 'loaded';
+      if (upload.id === currentUploadId) updateEvalButtonState(upload);
       return upload.exifMetadata;
     })
     .catch(error => {
       console.warn('EXIF preload skipped', error);
       upload.exifMetadata = {};
       upload.exifStatus = 'failed';
+      if (upload.id === currentUploadId) updateEvalButtonState(upload);
       return {};
     });
   return upload.exifPromise;
@@ -4105,6 +4129,7 @@ async function autoUploadSourceImageToDrive(upload) {
     patchUploadSourceImageState(upload, { driveSaveStatus: 'failed' });
   } finally {
     renderUploadQueue();
+    if (upload.id === currentUploadId) updateEvalButtonState(upload);
   }
 }
 
@@ -4288,8 +4313,8 @@ async function runEvaluation(options = {}) {
     showError(error.message || '写真の確認に失敗しました');
   } finally {
     loading.style.display = 'none';
-    evalButton.disabled = false;
     isEvaluationRunning = false;
+    updateEvalButtonState(activeUpload);
   }
 }
 
