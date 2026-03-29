@@ -2052,7 +2052,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Update this label on every same-day public update: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-03-29-a';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-03-29-b';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -2345,12 +2345,10 @@ function renderPublicStats(stats = {}) {
   const note = document.getElementById('public-stats-note');
   const generatedAt = formatStatsGeneratedAt(stats.generatedAt);
   const totalRecords = Number(stats.summary?.totalRecords || 0) || 0;
-  const estimatedUserCount = Number(stats.summary?.estimatedUserCount || 0) || 0;
   const sampleCount = Number(stats.sampleCount || 0) || 0;
   const noteParts = [];
   if (generatedAt) noteParts.push(`${generatedAt} 時点の統計`);
   if (totalRecords) noteParts.push(`総件数 ${totalRecords}件`);
-  if (estimatedUserCount) noteParts.push(`想定ユーザー数 ${estimatedUserCount}人`);
   if (sampleCount) noteParts.push(`モデル反映 ${sampleCount}件`);
   note.textContent = noteParts.join(' / ');
 }
@@ -5035,7 +5033,7 @@ function buildDeliveryState(record, status, extra = {}) {
 async function sendRecordById(id) {
   const record = await getRecordById(id);
   if (!record) {
-    showError('保存対象の履歴が見つかりません');
+    console.warn('Delivery skipped: record not found', id);
     return;
   }
 
@@ -5091,7 +5089,6 @@ async function sendRecordById(id) {
       });
     }
     await refreshRecordViews(updatedRecord, { skipVisibleRender: true });
-    showError(error.message || '自動保存に失敗しました');
   } finally {
     sendingRecordId = null;
     if (latestResultRecord) updateActionLinks(latestResultRecord);
@@ -5100,7 +5097,7 @@ async function sendRecordById(id) {
 
 async function sendLatestRecord() {
   if (!latestResultRecord) {
-    showError('先に写真をチェックしてください');
+    console.warn('Delivery skipped: no latest result record');
     return;
   }
   await sendRecordById(latestResultRecord.id);
