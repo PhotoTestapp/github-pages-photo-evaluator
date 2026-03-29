@@ -2119,6 +2119,8 @@ let currentUploadId = null;
 let currentBatchId = '';
 let historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
 let historyNeedsRender = true;
+let isAutoMovingToNextUpload = false;
+let isEvaluationRunning = false;
 let browserMlModelPromise = null;
 let mlRuntimeState = {
   mode: 'Rule-based',
@@ -2843,17 +2845,23 @@ async function buildQueueThumbnail(file) {
 }
 
 async function moveToNextUploadAfterFeedback() {
+  if (isAutoMovingToNextUpload || isEvaluationRunning) return false;
   const currentIndex = uploadQueue.findIndex(item => item.id === currentUploadId);
   if (currentIndex < 0) return false;
 
   const nextUpload = uploadQueue.slice(currentIndex + 1).find(item => item.status !== 'saved');
   if (!nextUpload) return false;
 
-  await selectUploadItem(nextUpload.id);
-  if (!nextUpload.evaluationResult) {
-    await runEvaluation();
+  isAutoMovingToNextUpload = true;
+  try {
+    await selectUploadItem(nextUpload.id);
+    if (!nextUpload.evaluationResult) {
+      await runEvaluation();
+    }
+    return true;
+  } finally {
+    isAutoMovingToNextUpload = false;
   }
-  return true;
 }
 
 function renderUploadQueue() {
@@ -4119,6 +4127,7 @@ function buildAnalysisMeta(metrics, scores) {
 }
 
 async function runEvaluation(options = {}) {
+  if (isEvaluationRunning) return;
   const activeUpload = getActiveUpload();
   if (!currentFile || !activeUpload) {
     showError('先に写真を選んでください');
@@ -4132,6 +4141,7 @@ async function runEvaluation(options = {}) {
   const loading = document.getElementById('loading');
   const loadingLabel = document.getElementById('loading-label');
 
+  isEvaluationRunning = true;
   evalButton.disabled = true;
   loading.style.display = 'block';
   document.getElementById('result-section').style.display = 'none';
@@ -4254,6 +4264,7 @@ async function runEvaluation(options = {}) {
   } finally {
     loading.style.display = 'none';
     evalButton.disabled = false;
+    isEvaluationRunning = false;
   }
 }
 
@@ -4609,6 +4620,7 @@ async function saveFeedbackToPublicCollector(payload) {
 }
 
 async function saveFeedbackForLatest() {
+  if (isAutoMovingToNextUpload || isEvaluationRunning) return;
   if (!latestResultRecord) {
     showError('先に写真をチェックしてください');
     return;
