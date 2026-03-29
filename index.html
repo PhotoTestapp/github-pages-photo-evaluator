@@ -1101,42 +1101,21 @@
   /* レスポンシブ */
   @media (max-width: 600px) {
     #page-stats .container {
-      min-height: calc(100vh - 56px);
       padding-bottom: 24px;
     }
     .public-stats-panel {
-      display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr);
-      min-height: calc(100vh - 148px);
-    }
-    .public-stats-mobile-tabs {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .public-stats-mobile-tab {
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--text-muted);
-      border-radius: 10px;
-      padding: 9px 8px;
-      font: inherit;
-      font-size: 0.74rem;
-      font-weight: 700;
-    }
-    .public-stats-mobile-tab.active {
-      background: var(--accent);
-      color: #0f0f11;
-      border-color: transparent;
-    }
-    .public-stats-grid { grid-template-columns: 1fr; }
-    .public-chart-card {
-      display: none;
-      padding: 12px;
       min-height: 0;
     }
-    .public-chart-card.active {
+    .public-stats-mobile-tabs {
+      display: none;
+    }
+    .public-stats-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .public-chart-card {
+      padding: 12px;
+      min-height: 0;
       display: block;
     }
     .public-chart-title {
