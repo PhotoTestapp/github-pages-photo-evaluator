@@ -71,6 +71,15 @@
 - カテゴリ分布
 - 項目別平均
 
+統計JSONの更新運用:
+
+- `photo_eval_public_stats.json` は公開版で自動集計しません
+- `photo-evaluator-training-lab-app/export_github_stats.py` で再生成します
+- 現行運用では次のコマンド実行時に再生成されます
+  - `photo-evaluator-training-lab-app/train-and-sync-to-github.command`
+  - `photo-evaluator-training-lab-app/merge-public-feedback-and-sync.command`
+- GitHub Pages に反映する際は `photo_eval_model.json` だけでなく `photo_eval_public_stats.json` も更新対象に含めます
+
 ## UI バージョン表記
 
 現行公開版には `PUBLIC_UI` の表記を置きます。
