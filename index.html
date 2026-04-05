@@ -2103,6 +2103,8 @@ const MAX_HISTORY_ITEMS = 100;
 const HISTORY_RENDER_PAGE_SIZE = 24;
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 const MAX_BATCH_UPLOADS = 5;
+const API_TIMEOUT_MS = 12000;
+const IMAGE_VALIDATION_MAX_BYTES = 256 * 1024;
 const DELIVERY_MAX_SIDE = 1920;
 const ANALYSIS_MAX_SIDE_DESKTOP = 640;
 const ANALYSIS_MAX_SIDE_MOBILE = 384;
@@ -2122,6 +2124,8 @@ let historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
 let historyNeedsRender = true;
 let isAutoMovingToNextUpload = false;
 let isEvaluationRunning = false;
+let isFeedbackSaving = false;
+let isUiLocked = false;
 let isProcessingSourceUploads = false;
 let browserMlModelPromise = null;
 let mlRuntimeState = {
@@ -2140,6 +2144,36 @@ function clamp(value, min, max) {
 function round(value, digits = 0) {
   const scale = 10 ** digits;
   return Math.round(value * scale) / scale;
+}
+
+function withTimeout(promise, ms, message = '処理がタイムアウトしました') {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
+function normalizeRequestError(error, fallbackMessage = '通信に失敗しました') {
+  const message = String(error?.message || '').trim();
+  if (!message) return new Error(fallbackMessage);
+  if (/timed out|timeout|タイムアウト/i.test(message)) return new Error('通信が混み合っているため時間内に応答しませんでした');
+  if (/Failed to fetch|NetworkError|Load failed/i.test(message)) return new Error('通信に失敗しました。接続先または通信状態を確認してください');
+  return error instanceof Error ? error : new Error(message);
+}
+
+function setUiLock(locked) {
+  isUiLocked = Boolean(locked);
+  const dropzoneEl = document.getElementById('dropzone');
+  const fileInputEl = document.getElementById('file-input');
+  const evalButtonEl = document.getElementById('eval-btn');
+  if (dropzoneEl) {
+    dropzoneEl.style.pointerEvents = locked ? 'none' : '';
+    dropzoneEl.style.opacity = locked ? '0.6' : '';
+  }
+  if (fileInputEl) fileInputEl.disabled = locked;
+  if (evalButtonEl && locked) evalButtonEl.disabled = true;
 }
 
 function renderPublicUiVersionLabel() {
@@ -2510,30 +2544,34 @@ function shouldUseMlApi() {
 
 async function apiRequest(path, options = {}) {
   const responseType = options.responseType || 'json';
-  const response = await fetch(`${getMlApiBase()}${path}`, {
-    method: options.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-
-  if (responseType === 'blob') {
-    if (!response.ok) throw new Error(`連携エラー: HTTP ${response.status}`);
-    return response.blob();
-  }
-
-  let data = null;
   try {
-    data = await response.json();
-  } catch {
-    throw new Error('連携結果の読み取りに失敗しました');
+    const response = await withTimeout(fetch(`${getMlApiBase()}${path}`, {
+      method: options.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    }), options.timeoutMs || API_TIMEOUT_MS, options.timeoutMessage || '通信がタイムアウトしました');
+
+    if (responseType === 'blob') {
+      if (!response.ok) throw new Error(`連携エラー: HTTP ${response.status}`);
+      return response.blob();
+    }
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error('連携結果の読み取りに失敗しました');
+    }
+    if (!response.ok || data?.success === false) {
+      throw new Error(data?.message || `連携エラー: HTTP ${response.status}`);
+    }
+    return data;
+  } catch (error) {
+    throw normalizeRequestError(error, '通信に失敗しました');
   }
-  if (!response.ok || data?.success === false) {
-    throw new Error(data?.message || `連携エラー: HTTP ${response.status}`);
-  }
-  return data;
 }
 
 function setMlRuntimeState(nextState = {}) {
@@ -2928,6 +2966,7 @@ function updateEvalButtonState(upload = getActiveUpload()) {
 }
 
 async function selectUploadItem(uploadId) {
+  if (isUiLocked) return;
   persistCurrentFeedbackDraft();
   const upload = uploadQueue.find(item => item.id === uploadId);
   if (!upload) return;
@@ -2986,6 +3025,10 @@ function updateActionLinks(record = null) {
 }
 
 function showPage(name) {
+  if (isUiLocked) {
+    showError('処理中は画面を切り替えられません。完了後にもう一度お試しください');
+    return;
+  }
   document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(button => button.classList.remove('active'));
   document.getElementById(`page-${name}`).classList.add('active');
@@ -3042,6 +3085,15 @@ function validateUploadFile(file) {
   }
 }
 
+async function validateUploadImageContent(file) {
+  try {
+    const blob = file.size > IMAGE_VALIDATION_MAX_BYTES ? file.slice(0, IMAGE_VALIDATION_MAX_BYTES, file.type || 'application/octet-stream') : file;
+    await loadImageElement(blob);
+  } catch {
+    throw new Error(`${file.name}: 画像の読み込みに失敗しました。破損しているか、このブラウザで未対応の形式です`);
+  }
+}
+
 function clearUploadQueue() {
   uploadQueue.forEach(item => {
     if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
@@ -3052,6 +3104,10 @@ function clearUploadQueue() {
 }
 
 async function setFiles(files) {
+  if (isUiLocked || isEvaluationRunning || isFeedbackSaving || isProcessingSourceUploads) {
+    showError('処理中のため、新しい写真の選択は完了後に行ってください');
+    return;
+  }
   if (files.length > MAX_BATCH_UPLOADS) {
     showError(`一度に選べる写真は${MAX_BATCH_UPLOADS}枚までです`);
     return;
@@ -3059,6 +3115,9 @@ async function setFiles(files) {
 
   try {
     files.forEach(validateUploadFile);
+    for (const file of files) {
+      await validateUploadImageContent(file);
+    }
   } catch (error) {
     showError(error.message || '写真の読み込みに失敗しました');
     return;
@@ -4174,7 +4233,10 @@ function buildAnalysisMeta(metrics, scores) {
 }
 
 async function runEvaluation(options = {}) {
-  if (isEvaluationRunning) return;
+  if (isEvaluationRunning || isUiLocked) {
+    showError('評価処理はすでに進行中です');
+    return;
+  }
   const activeUpload = getActiveUpload();
   if (!currentFile || !activeUpload) {
     showError('先に写真を選んでください');
@@ -4190,6 +4252,7 @@ async function runEvaluation(options = {}) {
   const loadingLabel = document.getElementById('loading-label');
 
   isEvaluationRunning = true;
+  setUiLock(true);
   evalButton.disabled = true;
   loading.style.display = 'block';
   document.getElementById('result-section').style.display = 'none';
@@ -4312,6 +4375,7 @@ async function runEvaluation(options = {}) {
   } finally {
     loading.style.display = 'none';
     isEvaluationRunning = false;
+    setUiLock(isFeedbackSaving);
     updateEvalButtonState(activeUpload);
   }
 }
@@ -4645,30 +4709,36 @@ async function saveFeedbackToPublicCollector(payload) {
   if (!collectorUrl) {
     return { success: false, skipped: true, message: '公開用の保存先が未設定です' };
   }
-
-  const response = await fetch(collectorUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8',
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const raw = await response.text();
-  let data = null;
   try {
-    data = raw ? JSON.parse(raw) : {};
-  } catch {
-    throw new Error(`公開用の保存先からの返答を読み取れませんでした (${raw.slice(0, 120)})`);
+    const response = await withTimeout(fetch(collectorUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+      body: JSON.stringify(payload),
+    }), API_TIMEOUT_MS, '公開用の保存先への通信がタイムアウトしました');
+
+    const raw = await response.text();
+    let data = null;
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new Error(`公開用の保存先からの返答を読み取れませんでした (${raw.slice(0, 120)})`);
+    }
+    if (!response.ok || data?.success === false) {
+      throw new Error(data?.message || `公開用の保存先エラー: HTTP ${response.status}`);
+    }
+    return data;
+  } catch (error) {
+    throw normalizeRequestError(error, '公開用の保存に失敗しました');
   }
-  if (!response.ok || data?.success === false) {
-    throw new Error(data?.message || `公開用の保存先エラー: HTTP ${response.status}`);
-  }
-  return data;
 }
 
 async function saveFeedbackForLatest() {
-  if (isAutoMovingToNextUpload || isEvaluationRunning) return;
+  if (isAutoMovingToNextUpload || isEvaluationRunning || isFeedbackSaving) {
+    setFeedbackStatus('保存または評価が進行中です', 'error');
+    return;
+  }
   if (!latestResultRecord) {
     showError('先に写真をチェックしてください');
     return;
@@ -4681,6 +4751,8 @@ async function saveFeedbackForLatest() {
   }
 
   setFeedbackStatus('保存中...');
+  isFeedbackSaving = true;
+  setUiLock(true);
 
   try {
     const payload = buildLearningFeedbackPayload(latestResultRecord, feedback);
@@ -4746,6 +4818,9 @@ async function saveFeedbackForLatest() {
     console.error(error);
     setFeedbackStatus(error.message || '保存に失敗しました', 'error');
     showError(error.message || '感想の保存に失敗しました');
+  } finally {
+    isFeedbackSaving = false;
+    setUiLock(isEvaluationRunning);
   }
 }
 
