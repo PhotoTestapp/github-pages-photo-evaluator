@@ -942,35 +942,35 @@
 
   #history-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 14px;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    max-width: 620px;
+    margin: 0 auto;
   }
   .history-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 26px;
     overflow: hidden;
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr) 112px;
-    align-items: center;
-    column-gap: 14px;
-    padding: 12px;
+    grid-template-columns: 1fr;
+    align-items: stretch;
     cursor: pointer;
     transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
     animation: fadeUp 0.3s ease-out both;
     content-visibility: auto;
     contain: layout paint style;
-    contain-intrinsic-size: 112px;
+    contain-intrinsic-size: 420px;
   }
-  .history-card:hover { border-color: var(--accent-border); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.22); }
+  .history-card:hover { border-color: var(--accent-border); transform: translateY(-1px); box-shadow: 0 12px 30px rgba(0,0,0,0.24); }
   .history-thumb {
-    width: 72px;
+    width: 100%;
     aspect-ratio: 1 / 1;
     overflow: hidden;
     background: var(--surface2);
     position: relative;
     flex-shrink: 0;
-    border-radius: 10px;
+    border-bottom: 1px solid var(--border);
   }
   .history-thumb img {
     width: 100%; height: 100%;
@@ -987,20 +987,21 @@
     font-family: 'DM Mono', monospace;
   }
   .history-info {
-    padding: 0;
-    display: flex;
-    align-items: center;
+    padding: 18px 18px 20px;
+    display: grid;
+    gap: 12px;
     min-width: 0;
   }
   .history-info-top {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: flex-start;
-    gap: 4px;
+    gap: 10px;
+    flex-wrap: wrap;
   }
   .history-score-big {
     font-family: 'DM Mono', monospace;
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 500;
   }
   .history-date { font-size: 0.7rem; color: var(--text-dim); font-family: 'DM Mono', monospace; }
@@ -1016,15 +1017,13 @@
   }
   .history-card-footer {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 6px;
-    flex-shrink: 0;
-    width: 112px;
-    min-width: 112px;
+    flex-wrap: wrap;
   }
   .btn-detail, .btn-delete {
-    width: 100%;
-    min-width: 100%;
+    width: auto;
+    min-width: 120px;
     padding: 8px 12px;
     border-radius: 6px;
     font-family: inherit;
@@ -1146,37 +1145,27 @@
       line-height: 1.15;
     }
     .scores-grid { grid-template-columns: 1fr 1fr; }
-    #history-grid { grid-template-columns: 1fr 1fr; }
     .container { padding: 24px 16px 60px; }
     .preview-bar, .result-header { align-items: flex-start; }
     .ml-summary-grid, .feedback-grid { grid-template-columns: 1fr; }
     .history-card {
-      grid-template-columns: 76px minmax(0, 1fr);
-      align-items: flex-start;
-    }
-    .history-thumb {
-      width: 76px;
+      grid-template-columns: 1fr;
     }
     .history-info {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 10px;
+      padding: 16px;
     }
     .history-card-footer {
-      grid-column: 1 / -1;
       width: 100%;
-      flex-direction: row;
-      flex-wrap: wrap;
     }
     .btn-detail,
     .btn-delete {
-      flex: 1 1 96px;
-      width: auto;
+      flex: 1 1 120px;
     }
   }
   @media (max-width: 380px) {
     .scores-grid { grid-template-columns: 1fr; }
-    #history-grid { grid-template-columns: 1fr; }
+    .history-card-footer { flex-direction: column; }
+    .btn-detail, .btn-delete { width: 100%; }
   }
 
   @media (hover: none), (pointer: coarse) {
@@ -4978,6 +4967,9 @@ async function clearAllHistory() {
 function buildHistoryCard(record, index) {
   const totalColor = getScoreColor(record.totalScore);
   const thumbSrc = record.historyThumbSrc || record.imageSrc;
+  const genreLabel = FEEDBACK_GENRE_LABELS[record.estimatedGenre] || 'その他';
+  const modeLabel = getEvaluationModeLabel(record.evaluationMode || 'Rule-based');
+  const scoreGapLabel = Number.isFinite(Number(record.scoreGap)) ? `${round(Number(record.scoreGap), 1)}点調整` : '';
 
   return `
     <div class="history-card" style="animation-delay:${index * 0.04}s" onclick="openModal(${record.id})">
@@ -4989,6 +4981,7 @@ function buildHistoryCard(record, index) {
           <span class="history-score-big" style="color:${totalColor.text}">${record.totalScore}<span style="font-size:0.7em;color:var(--text-dim)">/100</span></span>
           <span class="history-date">${escapeHtml(formatDate(record.createdAt))}</span>
         </div>
+        <div class="history-comment">${escapeHtml(`${genreLabel} / ${modeLabel}${scoreGapLabel ? ` / ${scoreGapLabel}` : ''}`)}</div>
         <div class="history-card-footer">
           <button class="btn-detail" onclick="openModal(${record.id});event.stopPropagation()">詳細</button>
           <button class="btn-delete" onclick="deleteRecord(${record.id}, event)">削除</button>
