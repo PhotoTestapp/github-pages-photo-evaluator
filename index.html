@@ -183,8 +183,30 @@
   }
   .public-stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
+  }
+  .public-stats-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .public-summary-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px;
+  }
+  .public-summary-label {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    margin-bottom: 6px;
+  }
+  .public-summary-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.15rem;
+    font-weight: 700;
   }
   .public-stats-mobile-tabs {
     display: none;
@@ -1117,6 +1139,10 @@
       grid-template-columns: 1fr;
       gap: 12px;
     }
+    .public-stats-summary {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
     .public-chart-card {
       padding: 12px;
       min-height: 0;
@@ -1944,6 +1970,47 @@
         </article>
       </div>
     </section>
+
+    <section class="public-stats-panel" id="local-stats-panel">
+      <div class="public-stats-head">
+        <div>
+          <p class="public-stats-title">この端末の集計</p>
+          <p class="public-stats-note" id="local-stats-note"></p>
+        </div>
+      </div>
+      <div class="public-stats-summary">
+        <article class="public-summary-card">
+          <div class="public-summary-label">評価件数</div>
+          <div class="public-summary-value" id="local-stats-total-records">0件</div>
+        </article>
+        <article class="public-summary-card">
+          <div class="public-summary-label">平均総合点</div>
+          <div class="public-summary-value" id="local-stats-average-total">-</div>
+        </article>
+        <article class="public-summary-card">
+          <div class="public-summary-label">学習モード使用</div>
+          <div class="public-summary-value" id="local-stats-ml-usage">0件</div>
+        </article>
+      </div>
+      <div class="public-stats-grid">
+        <article class="public-chart-card">
+          <h2 class="public-chart-title">総合点ヒストグラム</h2>
+          <div id="local-score-histogram" class="public-histogram"></div>
+        </article>
+        <article class="public-chart-card">
+          <h2 class="public-chart-title">自動判定カテゴリ</h2>
+          <div id="local-genre-chart" class="public-bar-chart"></div>
+        </article>
+        <article class="public-chart-card">
+          <h2 class="public-chart-title">ユーザー選択カテゴリ</h2>
+          <div id="local-feedback-genre-chart" class="public-bar-chart"></div>
+        </article>
+        <article class="public-chart-card">
+          <h2 class="public-chart-title">項目別平均</h2>
+          <div id="local-item-averages" class="public-bar-chart"></div>
+        </article>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -2040,8 +2107,8 @@ const STORAGE_KEYS = {
   publicFeedbackCollectorUrl: 'photo_eval_public_feedback_collector_url',
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
-// Update this label on every same-day public update: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-06-a';
+// Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-06-b';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -2376,6 +2443,169 @@ function renderPublicStats(stats = {}) {
   note.textContent = noteParts.join(' / ');
 }
 
+function buildLocalHistoryStats(records = []) {
+  const allHistory = Array.isArray(records) ? records : [];
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const history = allHistory.filter(record => {
+    const createdAt = new Date(String(record?.createdAt || ''));
+    return !Number.isNaN(createdAt.getTime()) && createdAt >= todayStart;
+  });
+  const histogram = Array.from({ length: 10 }, (_, index) => ({
+    label: `${index * 10}-${Math.min(index * 10 + 9, 100)}`,
+    count: 0,
+  }));
+  const genreCounts = {
+    portrait: 0,
+    landscape: 0,
+    animal: 0,
+    flora: 0,
+    food: 0,
+    other: 0,
+  };
+  const feedbackGenreCounts = {
+    portrait: 0,
+    landscape: 0,
+    animal: 0,
+    flora: 0,
+    food: 0,
+    other: 0,
+  };
+  const itemScores = {
+    composition: [],
+    light: [],
+    color: [],
+    technical: [],
+    subject: [],
+    impact: [],
+  };
+  let totalSum = 0;
+  let scoredCount = 0;
+  let mlUsageCount = 0;
+  let latestCreatedAt = '';
+
+  history.forEach(record => {
+    const totalScore = Number(record?.totalScore);
+    if (Number.isFinite(totalScore)) {
+      const bucketIndex = Math.min(9, Math.max(0, Math.floor(totalScore / 10)));
+      histogram[bucketIndex].count += 1;
+      totalSum += totalScore;
+      scoredCount += 1;
+    }
+
+    const genre = String(record?.estimatedGenre || '').trim();
+    if (genreCounts[genre] !== undefined) {
+      genreCounts[genre] += 1;
+    } else if (genre) {
+      genreCounts.other += 1;
+    }
+
+    normalizeFeedbackGenreValues(record?.feedback?.genre || '').forEach(selectedGenre => {
+      if (feedbackGenreCounts[selectedGenre] !== undefined) {
+        feedbackGenreCounts[selectedGenre] += 1;
+      }
+    });
+
+    if (record?.evaluationMode === 'ML-assisted') {
+      mlUsageCount += 1;
+    }
+
+    const createdAt = String(record?.createdAt || '');
+    if (createdAt && (!latestCreatedAt || new Date(createdAt) > new Date(latestCreatedAt))) {
+      latestCreatedAt = createdAt;
+    }
+
+    [
+      ['composition', 'compositionScore'],
+      ['light', 'lightScore'],
+      ['color', 'colorScore'],
+      ['technical', 'technicalScore'],
+      ['subject', 'subjectScore'],
+      ['impact', 'impressionScore'],
+    ].forEach(([label, key]) => {
+      const value = Number(record?.[key]);
+      if (Number.isFinite(value)) {
+        itemScores[label].push(value);
+      }
+    });
+  });
+
+  return {
+    generatedAt: latestCreatedAt,
+    summary: {
+      totalRecords: history.length,
+      averageTotalScore: scoredCount ? round(totalSum / scoredCount, 1) : 0,
+      mlUsageCount,
+    },
+    scoreHistogram: {
+      maxCount: Math.max(...histogram.map(bucket => bucket.count), 0),
+      buckets: histogram,
+    },
+    genreCounts: Object.entries(genreCounts)
+      .map(([label, count]) => ({ label, count }))
+      .filter(item => item.count > 0),
+    feedbackGenreCounts: Object.entries(feedbackGenreCounts)
+      .map(([label, count]) => ({ label, count }))
+      .filter(item => item.count > 0),
+    itemAverages: Object.entries(itemScores).map(([label, values]) => ({
+      label,
+      value: values.length ? round(values.reduce((sum, value) => sum + value, 0) / values.length, 1) : 0,
+    })),
+  };
+}
+
+function renderLocalHistoryStats(stats = {}) {
+  renderPublicHistogram('local-score-histogram', stats.scoreHistogram || {});
+  renderPublicBarChart('local-genre-chart', stats.genreCounts || [], {
+    labelFormatter: getPublicGenreLabel,
+  });
+  renderPublicBarChart('local-feedback-genre-chart', stats.feedbackGenreCounts || [], {
+    labelFormatter: getPublicGenreLabel,
+  });
+  renderPublicBarChart('local-item-averages', stats.itemAverages || [], {
+    labelFormatter: getPublicItemLabel,
+    valueFormatter: value => round(Number(value || 0), 1).toFixed(1),
+    maxValue: 100,
+  });
+
+  const totalRecords = Number(stats.summary?.totalRecords || 0);
+  const averageTotalScore = Number(stats.summary?.averageTotalScore || 0);
+  const mlUsageCount = Number(stats.summary?.mlUsageCount || 0);
+  const generatedAt = formatStatsGeneratedAt(stats.generatedAt);
+  const note = document.getElementById('local-stats-note');
+  const totalEl = document.getElementById('local-stats-total-records');
+  const averageEl = document.getElementById('local-stats-average-total');
+  const mlEl = document.getElementById('local-stats-ml-usage');
+  const noteParts = [];
+
+  if (generatedAt) noteParts.push(`最新評価 ${generatedAt}`);
+  if (totalRecords) noteParts.push(`今日この端末で ${totalRecords}件`);
+  if (mlUsageCount) noteParts.push(`学習表示 ${mlUsageCount}件`);
+
+  if (note) {
+    note.textContent = totalRecords ? noteParts.join(' / ') : '今日この端末で評価した写真を集計します。';
+  }
+  if (totalEl) totalEl.textContent = `${totalRecords}件`;
+  if (averageEl) averageEl.textContent = totalRecords ? `${averageTotalScore.toFixed(1)}点` : '-';
+  if (mlEl) mlEl.textContent = `${mlUsageCount}件`;
+}
+
+async function refreshLocalHistoryStats() {
+  try {
+    const history = await loadHistory();
+    renderLocalHistoryStats(buildLocalHistoryStats(history));
+  } catch (error) {
+    console.error(error);
+    const message = '<p class="public-stats-empty">この端末の統計を読み込めませんでした。</p>';
+    document.getElementById('local-score-histogram').innerHTML = message;
+    document.getElementById('local-genre-chart').innerHTML = message;
+    document.getElementById('local-feedback-genre-chart').innerHTML = message;
+    document.getElementById('local-item-averages').innerHTML = message;
+    const note = document.getElementById('local-stats-note');
+    if (note) note.textContent = 'この端末の統計を読み込めませんでした。';
+  }
+}
+
 function showPublicStatsCard(index = 0) {
   const cards = Array.from(document.querySelectorAll('#public-stats-panel .public-chart-card'));
   const tabs = Array.from(document.querySelectorAll('#public-stats-mobile-tabs .public-stats-mobile-tab'));
@@ -2388,6 +2618,7 @@ function showPublicStatsCard(index = 0) {
 }
 
 async function loadPublicStats() {
+  await refreshLocalHistoryStats();
   try {
     const response = await fetch(PUBLIC_STATS_PATH, { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -4914,6 +5145,9 @@ async function saveToHistory(record) {
       overflowImageIds.filter(Boolean).forEach(imageId => store.delete(imageId));
     }, SOURCE_IMAGE_STORE_NAME);
   }
+  if (document.getElementById('page-stats')?.classList.contains('active')) {
+    void refreshLocalHistoryStats();
+  }
 }
 
 function openHistoryDb() {
@@ -5013,6 +5247,7 @@ async function clearAllHistory() {
   modalRecordId = null;
   updateActionLinks();
   historyNeedsRender = true;
+  await refreshLocalHistoryStats();
   await renderHistory();
 }
 
@@ -5094,6 +5329,7 @@ async function deleteRecord(id, event) {
   }
   updateActionLinks(latestResultRecord);
   historyNeedsRender = true;
+  await refreshLocalHistoryStats();
   await renderHistory();
 }
 
@@ -5130,6 +5366,7 @@ async function refreshRecordViews(record, options = {}) {
     renderModalRecord(record);
   }
   historyNeedsRender = true;
+  await refreshLocalHistoryStats();
   await renderHistory();
 }
 
