@@ -2108,7 +2108,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-06-d';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-06-e';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -4108,7 +4108,7 @@ async function analyzeImageFile(file, preferredSource = '', analysisBundle = nul
     backgroundClutter: spatial.backgroundClutter,
     subjectCenterSupport: spatial.subjectCenterSupport,
     axisAlignedEdgeRatio: spatial.axisAlignedEdgeRatio,
-    fileNameScreenshotHint: hasScreenshotLikeFileName(fileForEvaluation.name),
+    fileNameScreenshotHint: hasScreenshotLikeFileName(file?.name || ''),
     subjectXRatio: spatial.subjectXRatio,
     subjectYRatio: spatial.subjectYRatio,
     edgeBands: spatial.edgeBands,
