@@ -2108,7 +2108,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-06-b';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-06-d';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -3715,6 +3715,8 @@ function analyzeSpatialFeatures(gray, width, height, stats) {
   let laplacianSum = 0;
   let lowEdgeNoiseSum = 0;
   let lowEdgeCount = 0;
+  let axisAlignedEdgeSum = 0;
+  let axisAlignedEdgeCount = 0;
   let subjectWeightedX = 0;
   let subjectWeightedY = 0;
   let totalSaliency = 0;
@@ -3750,6 +3752,10 @@ function analyzeSpatialFeatures(gray, width, height, stats) {
         gray[idx] + gray[idx - 1] + gray[idx + 1] + gray[idx - width] + gray[idx + width]
       ) / 5;
       const localNoise = Math.abs(gray[idx] - localMean);
+      const edgeStrengthBase = Math.abs(gx) + Math.abs(gy);
+      const axisAlignedRatio = edgeStrengthBase > 0
+        ? Math.abs(Math.abs(gx) - Math.abs(gy)) / edgeStrengthBase
+        : 0;
 
       edgeValues.push(edge);
       edgeSum += edge;
@@ -3757,6 +3763,10 @@ function analyzeSpatialFeatures(gray, width, height, stats) {
       if (edge < 28) {
         lowEdgeNoiseSum += localNoise;
         lowEdgeCount++;
+      }
+      if (edge > 24) {
+        axisAlignedEdgeSum += axisAlignedRatio;
+        axisAlignedEdgeCount++;
       }
 
       if (x < leftBoundary) bands.left += edge;
@@ -3820,9 +3830,65 @@ function analyzeSpatialFeatures(gray, width, height, stats) {
       0,
       1
     ),
+    axisAlignedEdgeRatio: axisAlignedEdgeSum / Math.max(1, axisAlignedEdgeCount),
     subjectXRatio: subjectX / width,
     subjectYRatio: subjectY / height,
     edgeBands: bands,
+  };
+}
+
+function hasScreenshotLikeFileName(fileName = '') {
+  const normalized = String(fileName || '').trim().toLowerCase();
+  if (!normalized) return false;
+  return normalized.includes('screenshot') || normalized.includes('スクリーンショット');
+}
+
+function assessScreenshotLikelihood(metrics) {
+  const screenLikeScore = clamp(
+    normalize(metrics.meanEdge, 16, 52) * 0.22 +
+    normalize(metrics.sharpnessRaw, 12, 36) * 0.22 +
+    (1 - normalize(metrics.noiseEstimate, 2.5, 10.5)) * 0.16 +
+    normalize(metrics.axisAlignedEdgeRatio || 0, 0.52, 0.9) * 0.24 +
+    (1 - normalize(metrics.saturationRatio, 0.08, 0.28)) * 0.08 +
+    (1 - normalize(metrics.subjectConcentration, 0.025, 0.11)) * 0.08,
+    0,
+    1
+  );
+  const likelyScreenshot = Boolean(metrics.fileNameScreenshotHint) || screenLikeScore >= 0.63;
+  const penaltyPoints = likelyScreenshot
+    ? round((metrics.fileNameScreenshotHint ? 12 : 6) + normalize(screenLikeScore, 0.63, 1) * 12, 1)
+    : 0;
+  return {
+    screenLikeScore,
+    likelyScreenshot,
+    penaltyPoints,
+  };
+}
+
+function applyScreenshotPenaltyToScores(scores, metrics) {
+  const assessment = assessScreenshotLikelihood(metrics);
+  if (!assessment.likelyScreenshot) {
+    return {
+      ...scores,
+      screenshotPenalty: 0,
+      screenLikeScore: assessment.screenLikeScore,
+      likelyScreenshot: false,
+    };
+  }
+
+  const penalty = assessment.penaltyPoints;
+  return {
+    ...scores,
+    compositionScore: clamp(round(scores.compositionScore - penalty * 0.25), 12, 97),
+    colorScore: clamp(round(scores.colorScore - penalty * 0.18), 12, 97),
+    technicalScore: clamp(round(scores.technicalScore - penalty * 0.55), 12, 98),
+    subjectScore: clamp(round(scores.subjectScore - penalty * 0.35), 12, 97),
+    impressionScore: clamp(round(scores.impressionScore - penalty * 0.6), 12, 98),
+    impactScore: clamp(round((scores.impactScore ?? scores.impressionScore) - penalty * 0.6), 12, 98),
+    totalScore: clamp(round(scores.totalScore - penalty), 8, 98),
+    screenshotPenalty: penalty,
+    screenLikeScore: assessment.screenLikeScore,
+    likelyScreenshot: true,
   };
 }
 
@@ -3917,7 +3983,7 @@ function deriveScoresFromMetrics(metrics) {
     impressionScore * 0.13
   ), 16, 98);
 
-  return {
+  return applyScreenshotPenaltyToScores({
     sceneType: 'general',
     compositionScore,
     lightScore,
@@ -3934,7 +4000,7 @@ function deriveScoresFromMetrics(metrics) {
     impressionScore,
     impactScore: impressionScore,
     totalScore,
-  };
+  }, metrics);
 }
 
 function evaluateScoresForPublicApp(metrics) {
@@ -3952,6 +4018,7 @@ function evaluateScoresForPublicApp(metrics) {
 
 function buildImprovementSignals(metrics, scores) {
   const signals = [];
+  if (scores.likelyScreenshot) signals.push('スクリーンショットや画面キャプチャの可能性があります');
   if (metrics.overexposedRatio > 0.08) signals.push('白飛びが目立ちます');
   if (metrics.underexposedRatio > 0.12) signals.push('黒つぶれが多めです');
   if (metrics.noiseEstimate > 10.5) signals.push('高ISO由来のノイズ感があります');
@@ -4001,6 +4068,9 @@ function generateCommentsFromAnalysis(scores, metrics, improvementSignals) {
   }
   overallComment += ` 平均輝度${round(metrics.brightnessMean)}、コントラスト${round(metrics.contrast, 2)}、背景散らかり度${round(metrics.backgroundClutter, 2)}。`;
   overallComment += ` 光${scores.lightScore}点、技術${scores.technicalScore}点、主題性${scores.subjectScore}点です。`;
+  if (scores.likelyScreenshot) {
+    overallComment += ' 画面キャプチャらしい規則的な輪郭が多いため、写真評価としては減点しています。';
+  }
 
   return { strengthsComment, improvementComment, overallComment };
 }
@@ -4037,6 +4107,8 @@ async function analyzeImageFile(file, preferredSource = '', analysisBundle = nul
     backgroundInformation: spatial.backgroundInformation,
     backgroundClutter: spatial.backgroundClutter,
     subjectCenterSupport: spatial.subjectCenterSupport,
+    axisAlignedEdgeRatio: spatial.axisAlignedEdgeRatio,
+    fileNameScreenshotHint: hasScreenshotLikeFileName(fileForEvaluation.name),
     subjectXRatio: spatial.subjectXRatio,
     subjectYRatio: spatial.subjectYRatio,
     edgeBands: spatial.edgeBands,
@@ -4112,6 +4184,7 @@ function buildImageMetadata(file, metrics, scores, exifMetadata = {}) {
 }
 
 function estimateGenreFromMetrics(metrics, scores) {
+  if (scores?.likelyScreenshot) return 'other';
   const aspectRatio = metrics.width / Math.max(1, metrics.height);
   const centeredSubject = metrics.subjectCenterSupport >= 0.58;
   const focusedSubject = metrics.subjectConcentration >= 0.08;
