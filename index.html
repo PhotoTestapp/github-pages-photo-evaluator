@@ -2006,6 +2006,10 @@
           <div id="local-feedback-genre-chart" class="public-bar-chart"></div>
         </article>
         <article class="public-chart-card">
+          <h2 class="public-chart-title">カテゴリ別ジャンル正答率</h2>
+          <div id="local-genre-accuracy-chart" class="public-bar-chart"></div>
+        </article>
+        <article class="public-chart-card">
           <h2 class="public-chart-title">項目別平均</h2>
           <div id="local-item-averages" class="public-bar-chart"></div>
         </article>
@@ -2108,7 +2112,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-i';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-j';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -2394,9 +2398,9 @@ function renderPublicBarChart(containerId, rows, options = {}) {
     const width = Math.max(2, (rawValue / maxValue) * 100);
     return `
       <div class="public-bar-row">
-        <div class="public-bar-label">${escapeHtml(labelFormatter(row.label))}</div>
+        <div class="public-bar-label">${escapeHtml(labelFormatter(row.label, row))}</div>
         <div class="public-bar-track"><div class="public-bar-fill" style="width:${width}%"></div></div>
-        <div class="public-bar-value">${escapeHtml(valueFormatter(rawValue))}</div>
+        <div class="public-bar-value">${escapeHtml(valueFormatter(rawValue, row))}</div>
       </div>
     `;
   }).join('');
@@ -2475,6 +2479,14 @@ function buildLocalHistoryStats(records = []) {
     food: 0,
     other: 0,
   };
+  const genreAccuracyByLabel = {
+    portrait: { total: 0, correct: 0 },
+    landscape: { total: 0, correct: 0 },
+    animal: { total: 0, correct: 0 },
+    flora: { total: 0, correct: 0 },
+    food: { total: 0, correct: 0 },
+    other: { total: 0, correct: 0 },
+  };
   const itemScores = {
     composition: [],
     light: [],
@@ -2517,6 +2529,13 @@ function buildLocalHistoryStats(records = []) {
         genreFeedbackCorrectCount += 1;
       }
     }
+    selectedGenres.forEach(selectedGenre => {
+      if (!genre || !genreAccuracyByLabel[selectedGenre]) return;
+      genreAccuracyByLabel[selectedGenre].total += 1;
+      if (selectedGenre === genre) {
+        genreAccuracyByLabel[selectedGenre].correct += 1;
+      }
+    });
 
     const createdAt = String(record?.createdAt || '');
     if (createdAt && (!latestCreatedAt || new Date(createdAt) > new Date(latestCreatedAt))) {
@@ -2557,6 +2576,15 @@ function buildLocalHistoryStats(records = []) {
     feedbackGenreCounts: Object.entries(feedbackGenreCounts)
       .map(([label, count]) => ({ label, count }))
       .filter(item => item.count > 0),
+    genreAccuracyByLabel: Object.entries(genreAccuracyByLabel)
+      .map(([label, counts]) => ({
+        label,
+        value: counts.total ? round((counts.correct / counts.total) * 100, 1) : 0,
+        correctCount: counts.correct,
+        totalCount: counts.total,
+      }))
+      .filter(item => item.totalCount > 0)
+      .sort((left, right) => right.value - left.value),
     itemAverages: Object.entries(itemScores).map(([label, values]) => ({
       label,
       value: values.length ? round(values.reduce((sum, value) => sum + value, 0) / values.length, 1) : 0,
@@ -2571,6 +2599,11 @@ function renderLocalHistoryStats(stats = {}) {
   });
   renderPublicBarChart('local-feedback-genre-chart', stats.feedbackGenreCounts || [], {
     labelFormatter: getPublicGenreLabel,
+  });
+  renderPublicBarChart('local-genre-accuracy-chart', stats.genreAccuracyByLabel || [], {
+    labelFormatter: (value, row) => `${getPublicGenreLabel(value)} ${Number(row?.correctCount || 0)}/${Number(row?.totalCount || 0)}`,
+    valueFormatter: value => `${round(Number(value || 0), 1).toFixed(1)}%`,
+    maxValue: 100,
   });
   renderPublicBarChart('local-item-averages', stats.itemAverages || [], {
     labelFormatter: getPublicItemLabel,
@@ -2612,6 +2645,7 @@ async function refreshLocalHistoryStats() {
     document.getElementById('local-score-histogram').innerHTML = message;
     document.getElementById('local-genre-chart').innerHTML = message;
     document.getElementById('local-feedback-genre-chart').innerHTML = message;
+    document.getElementById('local-genre-accuracy-chart').innerHTML = message;
     document.getElementById('local-item-averages').innerHTML = message;
     const note = document.getElementById('local-stats-note');
     if (note) note.textContent = 'この端末の統計を読み込めませんでした。';
