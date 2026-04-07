@@ -1988,10 +1988,6 @@
           <div class="public-summary-value" id="local-stats-average-total">-</div>
         </article>
         <article class="public-summary-card">
-          <div class="public-summary-label">学習モード使用</div>
-          <div class="public-summary-value" id="local-stats-ml-usage">0件</div>
-        </article>
-        <article class="public-summary-card">
           <div class="public-summary-label">ジャンル正答率</div>
           <div class="public-summary-value" id="local-stats-genre-accuracy">-</div>
         </article>
@@ -2112,7 +2108,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-e';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-f';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -2489,7 +2485,6 @@ function buildLocalHistoryStats(records = []) {
   };
   let totalSum = 0;
   let scoredCount = 0;
-  let mlUsageCount = 0;
   let genreFeedbackCount = 0;
   let genreFeedbackCorrectCount = 0;
   let latestCreatedAt = '';
@@ -2523,10 +2518,6 @@ function buildLocalHistoryStats(records = []) {
       }
     }
 
-    if (record?.evaluationMode === 'ML-assisted') {
-      mlUsageCount += 1;
-    }
-
     const createdAt = String(record?.createdAt || '');
     if (createdAt && (!latestCreatedAt || new Date(createdAt) > new Date(latestCreatedAt))) {
       latestCreatedAt = createdAt;
@@ -2552,7 +2543,6 @@ function buildLocalHistoryStats(records = []) {
     summary: {
       totalRecords: history.length,
       averageTotalScore: scoredCount ? round(totalSum / scoredCount, 1) : 0,
-      mlUsageCount,
       genreFeedbackCount,
       genreFeedbackCorrectCount,
       genreAccuracyRate: genreFeedbackCount ? round((genreFeedbackCorrectCount / genreFeedbackCount) * 100, 1) : 0,
@@ -2590,7 +2580,6 @@ function renderLocalHistoryStats(stats = {}) {
 
   const totalRecords = Number(stats.summary?.totalRecords || 0);
   const averageTotalScore = Number(stats.summary?.averageTotalScore || 0);
-  const mlUsageCount = Number(stats.summary?.mlUsageCount || 0);
   const genreFeedbackCount = Number(stats.summary?.genreFeedbackCount || 0);
   const genreFeedbackCorrectCount = Number(stats.summary?.genreFeedbackCorrectCount || 0);
   const genreAccuracyRate = Number(stats.summary?.genreAccuracyRate || 0);
@@ -2598,13 +2587,11 @@ function renderLocalHistoryStats(stats = {}) {
   const note = document.getElementById('local-stats-note');
   const totalEl = document.getElementById('local-stats-total-records');
   const averageEl = document.getElementById('local-stats-average-total');
-  const mlEl = document.getElementById('local-stats-ml-usage');
   const accuracyEl = document.getElementById('local-stats-genre-accuracy');
   const noteParts = [];
 
   if (generatedAt) noteParts.push(`最新評価 ${generatedAt}`);
   if (totalRecords) noteParts.push(`今日この端末で ${totalRecords}件`);
-  if (mlUsageCount) noteParts.push(`学習表示 ${mlUsageCount}件`);
   if (genreFeedbackCount) noteParts.push(`ジャンル照合 ${genreFeedbackCorrectCount}/${genreFeedbackCount}件`);
 
   if (note) {
@@ -2612,7 +2599,6 @@ function renderLocalHistoryStats(stats = {}) {
   }
   if (totalEl) totalEl.textContent = `${totalRecords}件`;
   if (averageEl) averageEl.textContent = totalRecords ? `${averageTotalScore.toFixed(1)}点` : '-';
-  if (mlEl) mlEl.textContent = `${mlUsageCount}件`;
   if (accuracyEl) accuracyEl.textContent = genreFeedbackCount ? `${genreAccuracyRate.toFixed(1)}%` : '-';
 }
 
