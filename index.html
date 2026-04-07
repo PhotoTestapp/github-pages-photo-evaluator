@@ -2108,7 +2108,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-h';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-i';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -3895,16 +3895,18 @@ function applyScreenshotPenaltyToScores(scores, metrics) {
   }
 
   const penalty = assessment.penaltyPoints;
-  const technicalPenalty = penalty * 0.85 + normalize(assessment.screenLikeScore, 0.63, 1) * 10;
+  const technicalPenalty = penalty * 1.15
+    + normalize(assessment.screenLikeScore, 0.63, 1) * 18
+    + (metrics.fileNameScreenshotHint ? 8 : 0);
   return {
     ...scores,
     compositionScore: clamp(round(scores.compositionScore - penalty * 0.25), 12, 97),
     colorScore: clamp(round(scores.colorScore - penalty * 0.18), 12, 97),
-    technicalScore: clamp(Math.min(round(scores.technicalScore - technicalPenalty), 58), 12, 98),
+    technicalScore: clamp(Math.min(round(scores.technicalScore - technicalPenalty), 42), 12, 98),
     subjectScore: clamp(round(scores.subjectScore - penalty * 0.35), 12, 97),
     impressionScore: clamp(round(scores.impressionScore - penalty * 0.6), 12, 98),
     impactScore: clamp(round((scores.impactScore ?? scores.impressionScore) - penalty * 0.6), 12, 98),
-    totalScore: clamp(round(scores.totalScore - penalty), 8, 98),
+    totalScore: clamp(Math.min(round(scores.totalScore - penalty), 62), 8, 98),
     screenshotPenalty: penalty,
     screenLikeScore: assessment.screenLikeScore,
     likelyScreenshot: true,
@@ -4615,7 +4617,11 @@ async function runEvaluation(options = {}) {
       }),
     ]);
 
-    const finalTotalScore = Math.round(Number(mlPrediction.predictedTotalScore ?? ruleBasedScores.totalScore));
+    const screenshotLike = Boolean(ruleBasedScores.likelyScreenshot || analysis.metrics.fileNameScreenshotHint);
+    const mlAdjustedTotalScore = Math.round(Number(mlPrediction.predictedTotalScore ?? ruleBasedScores.totalScore));
+    const finalTotalScore = screenshotLike
+      ? Math.min(mlAdjustedTotalScore, Math.round(Number(ruleBasedScores.totalScore || mlAdjustedTotalScore)))
+      : mlAdjustedTotalScore;
     const evaluationMode = mlPrediction.usedModel ? 'ML-assisted' : 'Rule-based';
     const hasLearningPlusGenre = dlGenreResult.mode === '学習＋' && Boolean(dlGenreResult.genre);
     const hasLearningGenre = evaluationMode === 'ML-assisted';
