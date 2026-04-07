@@ -2269,7 +2269,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-a';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-b';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -2907,52 +2907,180 @@ function exportLocalStatsPdf() {
       <meta charset="utf-8">
       <title>端末統計レポート</title>
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 32px; color: #1f2937; }
-        h1 { font-size: 22px; margin: 0 0 8px; }
-        p { margin: 0 0 8px; color: #4b5563; }
-        .section { margin-top: 24px; }
+        :root {
+          --ink: #1f2a44;
+          --muted: #5f6f89;
+          --line: #cfd9ea;
+          --panel: #f7fbff;
+          --panel-strong: #e8f1ff;
+          --brand: #2f76ea;
+          --brand-soft: #dceaff;
+          --accent: #0f9d7a;
+          --accent-soft: #dff7ef;
+          --warm: #ffb347;
+          --warm-soft: #fff2d9;
+        }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+          margin: 32px;
+          color: var(--ink);
+          background:
+            linear-gradient(180deg, #f7fbff 0%, #ffffff 26%, #ffffff 100%);
+        }
+        .hero {
+          background: linear-gradient(135deg, #2f76ea, #69b2ff);
+          color: #ffffff;
+          border-radius: 22px;
+          padding: 24px 26px 20px;
+          box-shadow: 0 16px 34px rgba(47, 118, 234, 0.16);
+        }
+        h1 { font-size: 24px; margin: 0 0 8px; letter-spacing: 0.02em; }
+        p { margin: 0 0 8px; color: var(--muted); }
+        .hero p { color: rgba(255,255,255,0.9); }
+        .summary-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+          margin-top: 18px;
+        }
+        .summary-card {
+          background: rgba(255,255,255,0.9);
+          color: var(--ink);
+          border-radius: 16px;
+          padding: 14px 16px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+        }
+        .summary-label {
+          font-size: 12px;
+          color: var(--muted);
+          margin-bottom: 6px;
+          letter-spacing: 0.04em;
+        }
+        .summary-value {
+          font-size: 20px;
+          font-weight: 800;
+          color: var(--brand);
+        }
+        .section {
+          margin-top: 22px;
+          background: var(--panel);
+          border: 1px solid var(--line);
+          border-radius: 18px;
+          padding: 18px 18px 16px;
+        }
+        h2 {
+          font-size: 16px;
+          margin: 0 0 12px;
+          color: var(--ink);
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .section-blue h2::before,
+        .section-green h2::before,
+        .section-warm h2::before,
+        .section-navy h2::before {
+          content: '';
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          display: inline-block;
+        }
+        .section-blue h2::before { background: var(--brand); }
+        .section-green h2::before { background: var(--accent); }
+        .section-warm h2::before { background: var(--warm); }
+        .section-navy h2::before { background: #35538f; }
+        .section-blue { background: linear-gradient(180deg, var(--panel-strong), #ffffff); }
+        .section-green { background: linear-gradient(180deg, var(--accent-soft), #ffffff); }
+        .section-warm { background: linear-gradient(180deg, var(--warm-soft), #ffffff); }
+        .section-navy { background: linear-gradient(180deg, #e8eefc, #ffffff); }
         .actions { margin: 16px 0 24px; }
-        .actions button { padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; cursor: pointer; font: inherit; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #d1d5db; padding: 10px 12px; font-size: 13px; text-align: left; vertical-align: top; }
-        th { width: 42%; background: #f8fafc; }
+        .actions button {
+          padding: 10px 14px;
+          border: 1px solid #c6d8fb;
+          border-radius: 10px;
+          background: #ffffff;
+          color: var(--brand);
+          cursor: pointer;
+          font: inherit;
+          font-weight: 700;
+          box-shadow: 0 8px 18px rgba(47, 118, 234, 0.08);
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; overflow: hidden; border-radius: 12px; }
+        th, td {
+          border: 1px solid var(--line);
+          padding: 10px 12px;
+          font-size: 13px;
+          text-align: left;
+          vertical-align: top;
+        }
+        th {
+          width: 42%;
+          background: rgba(255,255,255,0.82);
+          color: var(--ink);
+        }
+        td {
+          background: rgba(255,255,255,0.94);
+        }
         .summary th { width: 28%; }
-        @media print { .actions { display: none; } body { margin: 18px; } }
+        .section-blue .summary-value { color: var(--brand); }
+        .section-green .summary-value { color: var(--accent); }
+        .section-warm .summary-value { color: #c98518; }
+        @media (max-width: 720px) {
+          body { margin: 18px; }
+          .hero { padding: 18px 18px 16px; }
+          .summary-grid { grid-template-columns: 1fr; }
+        }
+        @media print {
+          .actions { display: none; }
+          body { margin: 16px; background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .hero, .section { box-shadow: none; }
+        }
       </style>
     </head>
     <body>
-      <h1>この端末の集計レポート</h1>
-      <p>集計期間: ${escapeHtml(rangeLabel)}</p>
-      <p>出力日時: ${escapeHtml(formatStatsGeneratedAt(new Date().toISOString()))}</p>
+      <div class="hero">
+        <h1>この端末の集計レポート</h1>
+        <p>集計期間: ${escapeHtml(rangeLabel)}</p>
+        <p>出力日時: ${escapeHtml(formatStatsGeneratedAt(new Date().toISOString()))}</p>
+        <div class="summary-grid">
+          ${summaryRows.map(([label, value]) => `
+            <div class="summary-card">
+              <div class="summary-label">${escapeHtml(label)}</div>
+              <div class="summary-value">${escapeHtml(value)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
       <div class="actions">
         <button type="button" onclick="window.print()">PDFとして保存 / 印刷</button>
       </div>
 
-      <div class="section">
+      <div class="section section-blue">
         <h2>概要</h2>
         <table class="summary">
           ${summaryRows.map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('')}
         </table>
       </div>
 
-      <div class="section">
+      <div class="section section-green">
         <h2>自動判定カテゴリ</h2>
         <table>${buildTableRows(stats.genreCounts || [])}</table>
       </div>
 
-      <div class="section">
+      <div class="section section-warm">
         <h2>ユーザー選択カテゴリ</h2>
         <table>${buildTableRows(stats.feedbackGenreCounts || [])}</table>
       </div>
 
-      <div class="section">
+      <div class="section section-navy">
         <h2>カテゴリ別ジャンル正答率</h2>
         <table>${(stats.genreAccuracyByLabel || []).length
           ? stats.genreAccuracyByLabel.map(row => `<tr><th>${escapeHtml(getPublicGenreLabel(row.label))}</th><td>${escapeHtml(`${Number(row.value || 0).toFixed(1)}% (${Number(row.correctCount || 0)}/${Number(row.totalCount || 0)})`)}</td></tr>`).join('')
           : '<tr><td colspan="2">データなし</td></tr>'}</table>
       </div>
 
-      <div class="section">
+      <div class="section section-blue">
         <h2>項目別平均</h2>
         <table>${buildTableRows(stats.itemAverages || [], 'value', value => `${Number(value || 0).toFixed(1)}点`)}</table>
       </div>
