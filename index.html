@@ -4588,14 +4588,34 @@ function buildImageMetadata(file, metrics, scores, exifMetadata = {}) {
   };
 }
 
+function isLandscapeLikeScene(metrics, scores) {
+  const aspectRatio = Number(metrics?.width || 0) / Math.max(1, Number(metrics?.height || 0));
+  const subjectConcentration = Number(metrics?.subjectConcentration || 0);
+  const backgroundInformation = Number(metrics?.backgroundInformation || 0);
+  const subjectCenterSupport = Number(metrics?.subjectCenterSupport || 0);
+  const saturationRatio = Number(metrics?.saturationRatio || 0);
+  const scenicSpread = subjectConcentration <= 0.07 && backgroundInformation >= 0.46;
+  const likelySingleSubject = subjectConcentration >= 0.082 && subjectCenterSupport >= 0.56 && (
+    Number(scores?.subjectScore || 0) >= 70 ||
+    Number(scores?.technicalScore || 0) >= 64 ||
+    saturationRatio >= 0.16
+  );
+  if (aspectRatio < 1.12) return false;
+  if (likelySingleSubject) return false;
+  return scenicSpread || (
+    aspectRatio >= 1.28 &&
+    backgroundInformation >= 0.44 &&
+    subjectCenterSupport <= 0.62 &&
+    subjectConcentration <= 0.085
+  );
+}
+
 function estimateGenreFromMetrics(metrics, scores) {
   if (scores?.likelyScreenshot) return 'other';
-  const aspectRatio = metrics.width / Math.max(1, metrics.height);
   const centeredSubject = metrics.subjectCenterSupport >= 0.58;
   const focusedSubject = metrics.subjectConcentration >= 0.08;
-  const scenicSpread = metrics.subjectConcentration <= 0.075 && metrics.backgroundInformation >= 0.42;
 
-  if (aspectRatio >= 1.18 && scenicSpread) return 'landscape';
+  if (isLandscapeLikeScene(metrics, scores)) return 'landscape';
   if (focusedSubject && centeredSubject && metrics.backgroundInformation <= 0.72 && scores.subjectScore >= 72) {
     if (metrics.saturationRatio >= 0.16 && scores.colorScore >= 70) return 'flora';
     if (metrics.brightnessMean >= 92 && metrics.brightnessMean <= 176 && scores.technicalScore >= 60) return 'portrait';
@@ -4664,7 +4684,11 @@ function shouldAcceptLearningPlusLandscape(metrics, scores, probabilities = {}, 
     if (landscapeProbability < 0.5) return false;
     if (probabilityMargin < 0.08 && fallbackGenre && fallbackGenre !== 'landscape') return false;
   }
-  return scenicSpread || (aspectRatio >= 1.22 && backgroundInformation >= 0.38 && !likelySingleSubject);
+  return isLandscapeLikeScene(metrics, scores) || (
+    scenicSpread &&
+    aspectRatio >= 1.12 &&
+    !likelySingleSubject
+  );
 }
 
 async function requestDlEstimatedGenre(imageSource, analysis) {
