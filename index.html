@@ -2269,8 +2269,9 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-p';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-q';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
+const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
   { code: 'landscape', label: '風景' },
@@ -2341,11 +2342,18 @@ let currentBatchId = '';
 let historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
 let historyNeedsRender = true;
 let historyRecordCache = [];
+let historyListCache = null;
+let localStatsHistoryCache = null;
 let localStatsDateRange = {
   start: '',
   end: '',
 };
 let latestLocalStatsSnapshot = null;
+let publicStatsCache = {
+  data: null,
+  fetchedAt: 0,
+  promise: null,
+};
 let isAutoMovingToNextUpload = false;
 let isEvaluationRunning = false;
 let isFeedbackSaving = false;
@@ -2986,12 +2994,34 @@ async function loadPublicStats() {
   initializeLocalStatsDateInputs();
   await refreshLocalHistoryStats();
   try {
-    const response = await fetch(PUBLIC_STATS_PATH, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const stats = await response.json();
+    const now = Date.now();
+    if (publicStatsCache.data && (now - publicStatsCache.fetchedAt) < PUBLIC_STATS_CACHE_TTL_MS) {
+      renderPublicStats(publicStatsCache.data || {});
+      return;
+    }
+    if (!publicStatsCache.promise) {
+      publicStatsCache.promise = fetch(PUBLIC_STATS_PATH, { cache: 'no-store' })
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        })
+        .then(stats => {
+          publicStatsCache.data = stats || {};
+          publicStatsCache.fetchedAt = Date.now();
+          return publicStatsCache.data;
+        })
+        .finally(() => {
+          publicStatsCache.promise = null;
+        });
+    }
+    const stats = await publicStatsCache.promise;
     renderPublicStats(stats || {});
   } catch (error) {
     console.error(error);
+    if (publicStatsCache.data) {
+      renderPublicStats(publicStatsCache.data || {});
+      return;
+    }
     const message = '<p class="public-stats-empty">統計データを読み込めませんでした。</p>';
     document.getElementById('public-score-histogram').innerHTML = message;
     document.getElementById('public-genre-chart').innerHTML = message;
@@ -5602,6 +5632,11 @@ async function saveToHistory(record) {
       overflowImageIds.filter(Boolean).forEach(imageId => store.delete(imageId));
     }, SOURCE_IMAGE_STORE_NAME);
   }
+  historyListCache = [slimRecord, ...(historyListCache || []).filter(item => item.id !== slimRecord.id)]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, MAX_HISTORY_ITEMS);
+  localStatsHistoryCache = [slimRecord, ...(localStatsHistoryCache || []).filter(item => item.id !== slimRecord.id)]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   if (document.getElementById('page-stats')?.classList.contains('active')) {
     void refreshLocalHistoryStats();
   }
@@ -5660,11 +5695,15 @@ function runStoreOperation(mode, executor, storeName = STORE_NAME) {
 }
 
 async function loadHistory() {
+  if (Array.isArray(historyListCache)) {
+    return historyListCache;
+  }
   return runStoreOperation('readonly', (store, resolve, reject) => {
     const request = store.getAll();
     request.onsuccess = () => {
       const items = request.result || [];
       items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      historyListCache = items;
       resolve(items);
     };
     request.onerror = () => reject(request.error);
@@ -5672,6 +5711,9 @@ async function loadHistory() {
 }
 
 async function loadLocalStatsHistory() {
+  if (Array.isArray(localStatsHistoryCache)) {
+    return localStatsHistoryCache;
+  }
   const statsHistory = await runStoreOperation('readonly', (store, resolve, reject) => {
     const request = store.getAll();
     request.onsuccess = () => {
@@ -5682,6 +5724,7 @@ async function loadLocalStatsHistory() {
     request.onerror = () => reject(request.error);
   }, LOCAL_STATS_STORE_NAME);
   if (Array.isArray(statsHistory) && statsHistory.length) {
+    localStatsHistoryCache = statsHistory;
     return statsHistory;
   }
   const history = await loadHistory();
@@ -5691,6 +5734,7 @@ async function loadLocalStatsHistory() {
       store.put(buildHistoryStorageRecord(record));
     });
   }, LOCAL_STATS_STORE_NAME);
+  localStatsHistoryCache = history.map(record => buildHistoryStorageRecord(record)).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   return history;
 }
 
@@ -5717,6 +5761,9 @@ async function deleteFromHistory(id) {
       store.delete(String(record.imageId));
     }, SOURCE_IMAGE_STORE_NAME);
   }
+  historyListCache = Array.isArray(historyListCache)
+    ? historyListCache.filter(item => item.id !== id)
+    : null;
 }
 
 async function clearAllHistory() {
@@ -5730,6 +5777,7 @@ async function clearAllHistory() {
   latestResultRecord = null;
   modalRecordId = null;
   historyRecordCache = [];
+  historyListCache = [];
   updateActionLinks();
   historyNeedsRender = true;
   await refreshLocalHistoryStats();
@@ -5852,8 +5900,7 @@ function closeModalDirect() {
 async function refreshRecordViews(record, options = {}) {
   const { skipVisibleRender = false } = options;
   await saveToHistory(record);
-  historyRecordCache = historyRecordCache.filter(item => item.id !== record.id);
-  historyRecordCache.unshift(record);
+  historyRecordCache = [record, ...historyRecordCache.filter(item => item.id !== record.id)];
   const upload = uploadQueue.find(item => item.recordId === record.id || item.id === record.uploadId);
   if (upload) {
     upload.recordId = record.id;
