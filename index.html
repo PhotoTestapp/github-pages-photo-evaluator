@@ -2269,7 +2269,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-n';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-o';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -2908,16 +2908,22 @@ function exportLocalStatsPdf() {
         h1 { font-size: 22px; margin: 0 0 8px; }
         p { margin: 0 0 8px; color: #4b5563; }
         .section { margin-top: 24px; }
+        .actions { margin: 16px 0 24px; }
+        .actions button { padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; cursor: pointer; font: inherit; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #d1d5db; padding: 10px 12px; font-size: 13px; text-align: left; vertical-align: top; }
         th { width: 42%; background: #f8fafc; }
         .summary th { width: 28%; }
+        @media print { .actions { display: none; } body { margin: 18px; } }
       </style>
     </head>
     <body>
       <h1>この端末の集計レポート</h1>
       <p>集計期間: ${escapeHtml(rangeLabel)}</p>
       <p>出力日時: ${escapeHtml(formatStatsGeneratedAt(new Date().toISOString()))}</p>
+      <div class="actions">
+        <button type="button" onclick="window.print()">PDFとして保存 / 印刷</button>
+      </div>
 
       <div class="section">
         <h2>概要</h2>
@@ -2947,16 +2953,27 @@ function exportLocalStatsPdf() {
         <h2>項目別平均</h2>
         <table>${buildTableRows(stats.itemAverages || [], 'value', value => `${Number(value || 0).toFixed(1)}点`)}</table>
       </div>
+      <script>
+        window.addEventListener('load', () => {
+          setTimeout(() => {
+            try { window.print(); } catch (error) {}
+          }, 250);
+        });
+      <\/script>
     </body>
     </html>
   `;
   printWindow.document.open();
   printWindow.document.write(html);
   printWindow.document.close();
-  printWindow.onload = () => {
-    printWindow.focus();
-    printWindow.print();
-  };
+  setTimeout(() => {
+    try {
+      printWindow.focus();
+      printWindow.print();
+    } catch (error) {
+      console.warn('PDF print fallback failed', error);
+    }
+  }, 400);
 }
 
 function showPublicStatsCard(index = 0) {
