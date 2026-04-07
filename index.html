@@ -2108,7 +2108,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-06-e';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-c';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -3837,10 +3837,16 @@ function analyzeSpatialFeatures(gray, width, height, stats) {
   };
 }
 
-function hasScreenshotLikeFileName(fileName = '') {
-  const normalized = String(fileName || '').trim().toLowerCase();
-  if (!normalized) return false;
-  return normalized.includes('screenshot') || normalized.includes('スクリーンショット');
+function hasScreenshotLikeFileHint(fileName = '', mimeType = '') {
+  const normalizedName = String(fileName || '').trim().toLowerCase();
+  const normalizedMime = String(mimeType || '').trim().toLowerCase();
+  if (normalizedName.includes('screenshot') || normalizedName.includes('スクリーンショット')) {
+    return true;
+  }
+  if (normalizedName.endsWith('.png')) {
+    return true;
+  }
+  return normalizedMime === 'image/png';
 }
 
 function assessScreenshotLikelihood(metrics) {
@@ -4108,7 +4114,7 @@ async function analyzeImageFile(file, preferredSource = '', analysisBundle = nul
     backgroundClutter: spatial.backgroundClutter,
     subjectCenterSupport: spatial.subjectCenterSupport,
     axisAlignedEdgeRatio: spatial.axisAlignedEdgeRatio,
-    fileNameScreenshotHint: hasScreenshotLikeFileName(file?.name || ''),
+    fileNameScreenshotHint: hasScreenshotLikeFileHint(file?.name || '', file?.type || ''),
     subjectXRatio: spatial.subjectXRatio,
     subjectYRatio: spatial.subjectYRatio,
     edgeBands: spatial.edgeBands,
@@ -4410,7 +4416,7 @@ async function sendRecordToWebhook(record) {
       throw new Error(data?.driveError ? `保存先エラー: ${data.driveError}` : `保存先エラー: ${data?.message || '保存処理に失敗しました'}`);
     }
     if (requiresDrive && !data.savedToDrive) {
-      throw new Error(data?.driveError ? `保存先エラー: ${data.driveError}` : `保存先エラー: ${data?.message || 'Google Drive への保存に失敗しました'}`);
+      throw new Error(data?.driveError ? `保存先エラー: ${data.driveError}` : `保存先エラー: ${data?.message || '保存に失敗しました'}`);
     }
 
     return {
