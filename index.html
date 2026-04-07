@@ -2269,7 +2269,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-o';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-p';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -2877,11 +2877,6 @@ function exportLocalStatsPdf() {
     showError('先に端末統計を表示してください');
     return;
   }
-  const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=960,height=1080');
-  if (!printWindow) {
-    showError('PDF出力用の画面を開けませんでした');
-    return;
-  }
   const rangeLabel = formatLocalStatsRangeLabel(stats.range?.startDate || '', stats.range?.endDate || '');
   const summaryRows = [
     ['評価件数', `${Number(stats.summary?.totalRecords || 0)}件`],
@@ -2963,17 +2958,17 @@ function exportLocalStatsPdf() {
     </body>
     </html>
   `;
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const reportUrl = URL.createObjectURL(blob);
+  const printWindow = window.open(reportUrl, '_blank');
+  if (!printWindow) {
+    URL.revokeObjectURL(reportUrl);
+    showError('PDF出力用の画面を開けませんでした');
+    return;
+  }
   setTimeout(() => {
-    try {
-      printWindow.focus();
-      printWindow.print();
-    } catch (error) {
-      console.warn('PDF print fallback failed', error);
-    }
-  }, 400);
+    URL.revokeObjectURL(reportUrl);
+  }, 60_000);
 }
 
 function showPublicStatsCard(index = 0) {
