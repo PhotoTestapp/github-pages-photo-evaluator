@@ -2108,7 +2108,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-f';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-g';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -3895,11 +3895,12 @@ function applyScreenshotPenaltyToScores(scores, metrics) {
   }
 
   const penalty = assessment.penaltyPoints;
+  const technicalPenalty = penalty * 0.85 + normalize(assessment.screenLikeScore, 0.63, 1) * 10;
   return {
     ...scores,
     compositionScore: clamp(round(scores.compositionScore - penalty * 0.25), 12, 97),
     colorScore: clamp(round(scores.colorScore - penalty * 0.18), 12, 97),
-    technicalScore: clamp(round(scores.technicalScore - penalty * 0.55), 12, 98),
+    technicalScore: clamp(Math.min(round(scores.technicalScore - technicalPenalty), 58), 12, 98),
     subjectScore: clamp(round(scores.subjectScore - penalty * 0.35), 12, 97),
     impressionScore: clamp(round(scores.impressionScore - penalty * 0.6), 12, 98),
     impactScore: clamp(round((scores.impactScore ?? scores.impressionScore) - penalty * 0.6), 12, 98),
