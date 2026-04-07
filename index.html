@@ -2269,7 +2269,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-q';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-a';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -4631,6 +4631,42 @@ function mapDlPredictedScoresToRuleShape(predictedScores = {}, fallbackScores = 
   return mapped;
 }
 
+function getSortedGenreProbabilityEntries(probabilities = {}) {
+  return Object.entries(probabilities || {})
+    .map(([label, value]) => [String(label), Number(value)])
+    .filter(([, value]) => Number.isFinite(value))
+    .sort((left, right) => right[1] - left[1]);
+}
+
+function shouldAcceptLearningPlusLandscape(metrics, scores, probabilities = {}, fallbackGenre = '') {
+  const aspectRatio = Number(metrics?.width || 0) / Math.max(1, Number(metrics?.height || 0));
+  const subjectConcentration = Number(metrics?.subjectConcentration || 0);
+  const backgroundInformation = Number(metrics?.backgroundInformation || 0);
+  const subjectCenterSupport = Number(metrics?.subjectCenterSupport || 0);
+  const saturationRatio = Number(metrics?.saturationRatio || 0);
+  const scenicSpread = subjectConcentration <= 0.082 && backgroundInformation >= 0.4;
+  const focusedSubject = subjectConcentration >= 0.08;
+  const centeredSubject = subjectCenterSupport >= 0.56;
+  const likelySingleSubject = focusedSubject && centeredSubject && (
+    Number(scores?.subjectScore || 0) >= 70 ||
+    Number(scores?.technicalScore || 0) >= 64 ||
+    saturationRatio >= 0.16
+  );
+  const sortedProbabilities = getSortedGenreProbabilityEntries(probabilities);
+  const landscapeProbability = sortedProbabilities.find(([label]) => label === 'landscape')?.[1] ?? Number(probabilities?.landscape || 0);
+  const secondProbability = sortedProbabilities.find(([label]) => label !== 'landscape')?.[1] ?? 0;
+  const probabilityMargin = landscapeProbability - secondProbability;
+
+  if (aspectRatio < 1.06) return false;
+  if (!scenicSpread && likelySingleSubject) return false;
+  if (fallbackGenre && fallbackGenre !== 'landscape' && fallbackGenre !== 'other' && likelySingleSubject) return false;
+  if (landscapeProbability) {
+    if (landscapeProbability < 0.5) return false;
+    if (probabilityMargin < 0.08 && fallbackGenre && fallbackGenre !== 'landscape') return false;
+  }
+  return scenicSpread || (aspectRatio >= 1.22 && backgroundInformation >= 0.38 && !likelySingleSubject);
+}
+
 async function requestDlEstimatedGenre(imageSource, analysis) {
   if (analysis?.scores?.likelyScreenshot || analysis?.metrics?.fileNameScreenshotHint) {
     return {
@@ -4659,16 +4695,28 @@ async function requestDlEstimatedGenre(imageSource, analysis) {
   );
 
   const dlScores = mapDlPredictedScoresToRuleShape(response?.predictedScores, analysis.scores);
+  const fallbackGenre = estimateGenreFromMetrics(analysis.metrics, dlScores);
   if (response?.predictedGenre) {
+    const predictedGenre = String(response.predictedGenre || '').trim();
+    const predictedGenreProbability = Number(response?.genreProbabilities?.[predictedGenre] || 0);
+    const shouldUseFallbackGenre = predictedGenre === 'landscape'
+      ? !shouldAcceptLearningPlusLandscape(analysis.metrics, dlScores, response?.genreProbabilities, fallbackGenre)
+      : Boolean(
+        fallbackGenre &&
+        fallbackGenre !== predictedGenre &&
+        fallbackGenre !== 'other' &&
+        predictedGenreProbability > 0 &&
+        predictedGenreProbability < 0.45
+      );
     // UI統一用の表示名です。内部のDLカテゴリ処理やフォールバック経路とは完全一致しない場合があります。
     // 変更時は本番・ローカル・ラボの表示整合を必ず確認してください。
     return {
-      genre: String(response.predictedGenre),
+      genre: shouldUseFallbackGenre ? fallbackGenre : predictedGenre,
       mode: '学習＋',
     };
   }
   return {
-    genre: estimateGenreFromMetrics(analysis.metrics, dlScores),
+    genre: fallbackGenre,
     mode: '学習＋',
   };
 }
