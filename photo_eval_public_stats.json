@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-04-05T14:55:33.667910+00:00",
-  "modelVersion": "linear-v2-20260405235533",
-  "sampleCount": 533,
+  "generatedAt": "2026-04-07T03:34:06.840303+00:00",
+  "modelVersion": "linear-v2-20260407123406",
+  "sampleCount": 571,
   "summary": {
-    "totalRecords": 536,
-    "estimatedUserCount": 2,
-    "averageTotalScore": 65.32
+    "totalRecords": 574,
+    "estimatedUserCount": 3,
+    "averageTotalScore": 65.13
   },
   "scoreHistogram": {
-    "maxCount": 328,
+    "maxCount": 346,
     "buckets": [
       {
         "label": "0-9",
@@ -38,25 +38,25 @@
         "label": "40-49",
         "min": 40,
         "max": 49,
-        "count": 11
+        "count": 13
       },
       {
         "label": "50-59",
         "min": 50,
         "max": 59,
-        "count": 63
+        "count": 72
       },
       {
         "label": "60-69",
         "min": 60,
         "max": 69,
-        "count": 328
+        "count": 346
       },
       {
         "label": "70-79",
         "min": 70,
         "max": 79,
-        "count": 132
+        "count": 141
       },
       {
         "label": "80-89",
@@ -75,11 +75,11 @@
   "genreCounts": [
     {
       "label": "portrait",
-      "count": 46
+      "count": 52
     },
     {
       "label": "landscape",
-      "count": 107
+      "count": 111
     },
     {
       "label": "animal",
@@ -87,41 +87,41 @@
     },
     {
       "label": "flora",
-      "count": 85
+      "count": 87
     },
     {
       "label": "food",
-      "count": 148
+      "count": 163
     },
     {
       "label": "other",
-      "count": 96
+      "count": 107
     }
   ],
   "itemAverages": [
     {
       "label": "composition",
-      "value": 64.38
+      "value": 64.26
     },
     {
       "label": "light",
-      "value": 73.89
+      "value": 73.76
     },
     {
       "label": "color",
-      "value": 69.26
+      "value": 68.87
     },
     {
       "label": "technical",
-      "value": 69.62
+      "value": 69.66
     },
     {
       "label": "subject",
-      "value": 61.81
+      "value": 61.72
     },
     {
       "label": "impact",
-      "value": 68.0
+      "value": 67.87
     }
   ]
 }
