@@ -181,6 +181,39 @@
     color: var(--text-muted);
     font-size: 0.78rem;
   }
+  .public-stats-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .public-stats-control {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .public-stats-control label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .public-stats-control input {
+    min-height: 40px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.84rem;
+  }
+  .public-stats-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
   .public-stats-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1235,6 +1268,13 @@
     .public-stats-panel {
       min-height: 0;
     }
+    .public-stats-controls {
+      width: 100%;
+      align-items: stretch;
+    }
+    .public-stats-control {
+      flex: 1 1 140px;
+    }
     .public-stats-mobile-tabs {
       display: none;
     }
@@ -2080,6 +2120,20 @@
           <p class="public-stats-title">この端末の集計</p>
           <p class="public-stats-note" id="local-stats-note"></p>
         </div>
+        <div class="public-stats-controls">
+          <div class="public-stats-control">
+            <label for="local-stats-start-date">開始日</label>
+            <input id="local-stats-start-date" type="date">
+          </div>
+          <div class="public-stats-control">
+            <label for="local-stats-end-date">終了日</label>
+            <input id="local-stats-end-date" type="date">
+          </div>
+          <div class="public-stats-actions">
+            <button type="button" class="btn-secondary" onclick="applyLocalStatsDateRange()">期間を反映</button>
+            <button type="button" class="btn-secondary" onclick="exportLocalStatsPdf()">結果をPDF出力</button>
+          </div>
+        </div>
       </div>
       <div class="public-stats-summary">
         <article class="public-summary-card">
@@ -2215,7 +2269,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-m';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-n';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -2287,6 +2341,11 @@ let currentBatchId = '';
 let historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
 let historyNeedsRender = true;
 let historyRecordCache = [];
+let localStatsDateRange = {
+  start: '',
+  end: '',
+};
+let latestLocalStatsSnapshot = null;
 let isAutoMovingToNextUpload = false;
 let isEvaluationRunning = false;
 let isFeedbackSaving = false;
@@ -2488,6 +2547,21 @@ function formatStatsGeneratedAt(iso) {
   });
 }
 
+function formatDateInputValue(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatLocalStatsRangeLabel(startValue = '', endValue = '') {
+  if (!startValue && !endValue) return '全期間';
+  const startLabel = startValue || '開始指定なし';
+  const endLabel = endValue || '終了指定なし';
+  return `${startLabel} - ${endLabel}`;
+}
+
 function renderPublicBarChart(containerId, rows, options = {}) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -2556,13 +2630,16 @@ function renderPublicStats(stats = {}) {
   note.textContent = noteParts.join(' / ');
 }
 
-function buildLocalHistoryStats(records = []) {
+function buildLocalHistoryStats(records = [], options = {}) {
   const allHistory = Array.isArray(records) ? records : [];
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const startDate = options.startDate ? new Date(`${options.startDate}T00:00:00`) : null;
+  const endDate = options.endDate ? new Date(`${options.endDate}T23:59:59.999`) : null;
   const history = allHistory.filter(record => {
     const createdAt = new Date(String(record?.createdAt || ''));
-    return !Number.isNaN(createdAt.getTime()) && createdAt >= todayStart;
+    if (Number.isNaN(createdAt.getTime())) return false;
+    if (startDate && createdAt < startDate) return false;
+    if (endDate && createdAt > endDate) return false;
+    return true;
   });
   const histogram = Array.from({ length: 10 }, (_, index) => ({
     label: `${index * 10}-${Math.min(index * 10 + 9, 100)}`,
@@ -2664,6 +2741,10 @@ function buildLocalHistoryStats(records = []) {
 
   return {
     generatedAt: latestCreatedAt,
+    range: {
+      startDate: options.startDate || '',
+      endDate: options.endDate || '',
+    },
     summary: {
       totalRecords: history.length,
       averageTotalScore: scoredCount ? round(totalSum / scoredCount, 1) : 0,
@@ -2698,6 +2779,7 @@ function buildLocalHistoryStats(records = []) {
 }
 
 function renderLocalHistoryStats(stats = {}) {
+  latestLocalStatsSnapshot = stats;
   renderPublicHistogram('local-score-histogram', stats.scoreHistogram || {});
   renderPublicBarChart('local-genre-chart', stats.genreCounts || [], {
     labelFormatter: getPublicGenreLabel,
@@ -2722,6 +2804,7 @@ function renderLocalHistoryStats(stats = {}) {
   const genreFeedbackCorrectCount = Number(stats.summary?.genreFeedbackCorrectCount || 0);
   const genreAccuracyRate = Number(stats.summary?.genreAccuracyRate || 0);
   const generatedAt = formatStatsGeneratedAt(stats.generatedAt);
+  const rangeLabel = formatLocalStatsRangeLabel(stats.range?.startDate || '', stats.range?.endDate || '');
   const note = document.getElementById('local-stats-note');
   const totalEl = document.getElementById('local-stats-total-records');
   const averageEl = document.getElementById('local-stats-average-total');
@@ -2729,11 +2812,12 @@ function renderLocalHistoryStats(stats = {}) {
   const noteParts = [];
 
   if (generatedAt) noteParts.push(`最新評価 ${generatedAt}`);
-  if (totalRecords) noteParts.push(`今日この端末で ${totalRecords}件`);
+  noteParts.push(`集計期間 ${rangeLabel}`);
+  if (totalRecords) noteParts.push(`${totalRecords}件`);
   if (genreFeedbackCount) noteParts.push(`ジャンル照合 ${genreFeedbackCorrectCount}/${genreFeedbackCount}件`);
 
   if (note) {
-    note.textContent = totalRecords ? noteParts.join(' / ') : '今日この端末で評価した写真を集計します。';
+    note.textContent = totalRecords ? noteParts.join(' / ') : `集計期間 ${rangeLabel} のデータはありません。`;
   }
   if (totalEl) totalEl.textContent = `${totalRecords}件`;
   if (averageEl) averageEl.textContent = totalRecords ? `${averageTotalScore.toFixed(1)}点` : '-';
@@ -2743,7 +2827,10 @@ function renderLocalHistoryStats(stats = {}) {
 async function refreshLocalHistoryStats() {
   try {
     const history = await loadLocalStatsHistory();
-    renderLocalHistoryStats(buildLocalHistoryStats(history));
+    renderLocalHistoryStats(buildLocalHistoryStats(history, {
+      startDate: localStatsDateRange.start,
+      endDate: localStatsDateRange.end,
+    }));
   } catch (error) {
     console.error(error);
     const message = '<p class="public-stats-empty">この端末の統計を読み込めませんでした。</p>';
@@ -2755,6 +2842,121 @@ async function refreshLocalHistoryStats() {
     const note = document.getElementById('local-stats-note');
     if (note) note.textContent = 'この端末の統計を読み込めませんでした。';
   }
+}
+
+function initializeLocalStatsDateInputs() {
+  const startInput = document.getElementById('local-stats-start-date');
+  const endInput = document.getElementById('local-stats-end-date');
+  if (!startInput || !endInput) return;
+  const today = formatDateInputValue(new Date());
+  if (!localStatsDateRange.start) localStatsDateRange.start = today;
+  if (!localStatsDateRange.end) localStatsDateRange.end = today;
+  if (!startInput.value) startInput.value = localStatsDateRange.start;
+  if (!endInput.value) endInput.value = localStatsDateRange.end;
+}
+
+function applyLocalStatsDateRange() {
+  const startInput = document.getElementById('local-stats-start-date');
+  const endInput = document.getElementById('local-stats-end-date');
+  const startValue = startInput?.value || '';
+  const endValue = endInput?.value || '';
+  if (startValue && endValue && startValue > endValue) {
+    showError('開始日は終了日以前にしてください');
+    return;
+  }
+  localStatsDateRange = {
+    start: startValue,
+    end: endValue,
+  };
+  void refreshLocalHistoryStats();
+}
+
+function exportLocalStatsPdf() {
+  const stats = latestLocalStatsSnapshot;
+  if (!stats) {
+    showError('先に端末統計を表示してください');
+    return;
+  }
+  const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=960,height=1080');
+  if (!printWindow) {
+    showError('PDF出力用の画面を開けませんでした');
+    return;
+  }
+  const rangeLabel = formatLocalStatsRangeLabel(stats.range?.startDate || '', stats.range?.endDate || '');
+  const summaryRows = [
+    ['評価件数', `${Number(stats.summary?.totalRecords || 0)}件`],
+    ['平均総合点', Number(stats.summary?.totalRecords || 0) ? `${Number(stats.summary?.averageTotalScore || 0).toFixed(1)}点` : '-'],
+    ['ジャンル正答率', Number(stats.summary?.genreFeedbackCount || 0) ? `${Number(stats.summary?.genreAccuracyRate || 0).toFixed(1)}%` : '-'],
+  ];
+  const getStatsRowLabel = row => {
+    if (['composition', 'light', 'color', 'technical', 'subject', 'impact'].includes(row?.label)) {
+      return getPublicItemLabel(row.label);
+    }
+    return getPublicGenreLabel(row?.label);
+  };
+  const buildTableRows = (rows, valueKey = 'count', formatter = value => String(value)) => rows.length
+    ? rows.map(row => `<tr><th>${escapeHtml(getStatsRowLabel(row))}</th><td>${escapeHtml(formatter(row[valueKey], row))}</td></tr>`).join('')
+    : '<tr><td colspan="2">データなし</td></tr>';
+  const html = `
+    <!doctype html>
+    <html lang="ja">
+    <head>
+      <meta charset="utf-8">
+      <title>端末統計レポート</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 32px; color: #1f2937; }
+        h1 { font-size: 22px; margin: 0 0 8px; }
+        p { margin: 0 0 8px; color: #4b5563; }
+        .section { margin-top: 24px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #d1d5db; padding: 10px 12px; font-size: 13px; text-align: left; vertical-align: top; }
+        th { width: 42%; background: #f8fafc; }
+        .summary th { width: 28%; }
+      </style>
+    </head>
+    <body>
+      <h1>この端末の集計レポート</h1>
+      <p>集計期間: ${escapeHtml(rangeLabel)}</p>
+      <p>出力日時: ${escapeHtml(formatStatsGeneratedAt(new Date().toISOString()))}</p>
+
+      <div class="section">
+        <h2>概要</h2>
+        <table class="summary">
+          ${summaryRows.map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('')}
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>自動判定カテゴリ</h2>
+        <table>${buildTableRows(stats.genreCounts || [])}</table>
+      </div>
+
+      <div class="section">
+        <h2>ユーザー選択カテゴリ</h2>
+        <table>${buildTableRows(stats.feedbackGenreCounts || [])}</table>
+      </div>
+
+      <div class="section">
+        <h2>カテゴリ別ジャンル正答率</h2>
+        <table>${(stats.genreAccuracyByLabel || []).length
+          ? stats.genreAccuracyByLabel.map(row => `<tr><th>${escapeHtml(getPublicGenreLabel(row.label))}</th><td>${escapeHtml(`${Number(row.value || 0).toFixed(1)}% (${Number(row.correctCount || 0)}/${Number(row.totalCount || 0)})`)}</td></tr>`).join('')
+          : '<tr><td colspan="2">データなし</td></tr>'}</table>
+      </div>
+
+      <div class="section">
+        <h2>項目別平均</h2>
+        <table>${buildTableRows(stats.itemAverages || [], 'value', value => `${Number(value || 0).toFixed(1)}点`)}</table>
+      </div>
+    </body>
+    </html>
+  `;
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.onload = () => {
+    printWindow.focus();
+    printWindow.print();
+  };
 }
 
 function showPublicStatsCard(index = 0) {
@@ -2769,6 +2971,7 @@ function showPublicStatsCard(index = 0) {
 }
 
 async function loadPublicStats() {
+  initializeLocalStatsDateInputs();
   await refreshLocalHistoryStats();
   try {
     const response = await fetch(PUBLIC_STATS_PATH, { cache: 'no-store' });
