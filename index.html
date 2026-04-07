@@ -188,7 +188,7 @@
   }
   .public-stats-summary {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 14px;
   }
@@ -1991,6 +1991,10 @@
           <div class="public-summary-label">学習モード使用</div>
           <div class="public-summary-value" id="local-stats-ml-usage">0件</div>
         </article>
+        <article class="public-summary-card">
+          <div class="public-summary-label">ジャンル正答率</div>
+          <div class="public-summary-value" id="local-stats-genre-accuracy">-</div>
+        </article>
       </div>
       <div class="public-stats-grid">
         <article class="public-chart-card">
@@ -2108,7 +2112,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-c';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-e';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -2341,6 +2345,10 @@ function getPublicGenreLabel(code) {
   }[code] || String(code || '');
 }
 
+function getEstimatedGenreDisplayLabel(code) {
+  return code ? (FEEDBACK_GENRE_LABELS[code] || getPublicGenreLabel(code)) : '未判定';
+}
+
 function getPublicItemLabel(code) {
   return {
     composition: '構図',
@@ -2482,6 +2490,8 @@ function buildLocalHistoryStats(records = []) {
   let totalSum = 0;
   let scoredCount = 0;
   let mlUsageCount = 0;
+  let genreFeedbackCount = 0;
+  let genreFeedbackCorrectCount = 0;
   let latestCreatedAt = '';
 
   history.forEach(record => {
@@ -2500,11 +2510,18 @@ function buildLocalHistoryStats(records = []) {
       genreCounts.other += 1;
     }
 
-    normalizeFeedbackGenreValues(record?.feedback?.genre || '').forEach(selectedGenre => {
+    const selectedGenres = normalizeFeedbackGenreValues(record?.feedback?.genre || '');
+    selectedGenres.forEach(selectedGenre => {
       if (feedbackGenreCounts[selectedGenre] !== undefined) {
         feedbackGenreCounts[selectedGenre] += 1;
       }
     });
+    if (selectedGenres.length && genre) {
+      genreFeedbackCount += 1;
+      if (selectedGenres.includes(genre)) {
+        genreFeedbackCorrectCount += 1;
+      }
+    }
 
     if (record?.evaluationMode === 'ML-assisted') {
       mlUsageCount += 1;
@@ -2536,6 +2553,9 @@ function buildLocalHistoryStats(records = []) {
       totalRecords: history.length,
       averageTotalScore: scoredCount ? round(totalSum / scoredCount, 1) : 0,
       mlUsageCount,
+      genreFeedbackCount,
+      genreFeedbackCorrectCount,
+      genreAccuracyRate: genreFeedbackCount ? round((genreFeedbackCorrectCount / genreFeedbackCount) * 100, 1) : 0,
     },
     scoreHistogram: {
       maxCount: Math.max(...histogram.map(bucket => bucket.count), 0),
@@ -2571,16 +2591,21 @@ function renderLocalHistoryStats(stats = {}) {
   const totalRecords = Number(stats.summary?.totalRecords || 0);
   const averageTotalScore = Number(stats.summary?.averageTotalScore || 0);
   const mlUsageCount = Number(stats.summary?.mlUsageCount || 0);
+  const genreFeedbackCount = Number(stats.summary?.genreFeedbackCount || 0);
+  const genreFeedbackCorrectCount = Number(stats.summary?.genreFeedbackCorrectCount || 0);
+  const genreAccuracyRate = Number(stats.summary?.genreAccuracyRate || 0);
   const generatedAt = formatStatsGeneratedAt(stats.generatedAt);
   const note = document.getElementById('local-stats-note');
   const totalEl = document.getElementById('local-stats-total-records');
   const averageEl = document.getElementById('local-stats-average-total');
   const mlEl = document.getElementById('local-stats-ml-usage');
+  const accuracyEl = document.getElementById('local-stats-genre-accuracy');
   const noteParts = [];
 
   if (generatedAt) noteParts.push(`最新評価 ${generatedAt}`);
   if (totalRecords) noteParts.push(`今日この端末で ${totalRecords}件`);
   if (mlUsageCount) noteParts.push(`学習表示 ${mlUsageCount}件`);
+  if (genreFeedbackCount) noteParts.push(`ジャンル照合 ${genreFeedbackCorrectCount}/${genreFeedbackCount}件`);
 
   if (note) {
     note.textContent = totalRecords ? noteParts.join(' / ') : '今日この端末で評価した写真を集計します。';
@@ -2588,6 +2613,7 @@ function renderLocalHistoryStats(stats = {}) {
   if (totalEl) totalEl.textContent = `${totalRecords}件`;
   if (averageEl) averageEl.textContent = totalRecords ? `${averageTotalScore.toFixed(1)}点` : '-';
   if (mlEl) mlEl.textContent = `${mlUsageCount}件`;
+  if (accuracyEl) accuracyEl.textContent = genreFeedbackCount ? `${genreAccuracyRate.toFixed(1)}%` : '-';
 }
 
 async function refreshLocalHistoryStats() {
@@ -4597,6 +4623,15 @@ async function runEvaluation(options = {}) {
     ]);
 
     const finalTotalScore = Math.round(Number(mlPrediction.predictedTotalScore ?? ruleBasedScores.totalScore));
+    const evaluationMode = mlPrediction.usedModel ? 'ML-assisted' : 'Rule-based';
+    const hasLearningPlusGenre = dlGenreResult.mode === '学習＋' && Boolean(dlGenreResult.genre);
+    const hasLearningGenre = evaluationMode === 'ML-assisted';
+    const estimatedGenre = hasLearningPlusGenre
+      ? String(dlGenreResult.genre || '')
+      : (hasLearningGenre ? estimateGenreFromMetrics(analysis.metrics, ruleBasedScores) : '');
+    const categoryEstimateMode = hasLearningPlusGenre
+      ? '学習＋'
+      : (hasLearningGenre ? '学習' : '');
     const anonymousUserId = getAnonymousUserId();
     const record = {
       id: Date.now(),
@@ -4617,10 +4652,10 @@ async function runEvaluation(options = {}) {
       featureVector,
       imageMeta: buildImageMetadata(fileForEvaluation, analysis.metrics, ruleBasedScores, exifMetadata),
       originalFileHeaderBase64,
-      estimatedGenre: dlGenreResult.genre || estimateGenreFromMetrics(analysis.metrics, ruleBasedScores),
-      categoryEstimateMode: dlGenreResult.mode || '標準',
+      estimatedGenre,
+      categoryEstimateMode,
       ruleBasedScores,
-      evaluationMode: mlPrediction.usedModel ? 'ML-assisted' : 'Rule-based',
+      evaluationMode,
       modelVersion: mlPrediction.modelVersion || '',
       mlScore: mlPrediction.usedModel ? Number(mlPrediction.predictedTotalScore || finalTotalScore) : null,
       scoreGap: round(Math.abs(finalTotalScore - Number(ruleBasedScores.totalScore || 0)), 2),
@@ -4710,8 +4745,8 @@ function buildMlSummaryHtml(record) {
   const modelVersion = record.modelVersion || '未学習';
   const ruleScore = record.ruleBasedScores?.totalScore ?? record.totalScore;
   const scoreGap = Number.isFinite(record.scoreGap) ? record.scoreGap : 0;
-  const estimatedGenreLabel = FEEDBACK_GENRE_LABELS[record.estimatedGenre] || 'その他';
-  const categoryEstimateModeLabel = record.categoryEstimateMode || '標準';
+  const estimatedGenreLabel = getEstimatedGenreDisplayLabel(record.estimatedGenre);
+  const categoryEstimateModeLabel = record.categoryEstimateMode || '';
 
   return `
     <div class="ml-summary-card">
@@ -4738,7 +4773,7 @@ function buildMlSummaryHtml(record) {
         </div>
         <div class="ml-summary-item">
           <span class="summary-label">推定カテゴリ</span>
-          <span class="summary-value">${escapeHtml(`${estimatedGenreLabel}（${categoryEstimateModeLabel}）`)}</span>
+          <span class="summary-value">${escapeHtml(categoryEstimateModeLabel ? `${estimatedGenreLabel}（${categoryEstimateModeLabel}）` : estimatedGenreLabel)}</span>
         </div>
       </div>
       <p class="feedback-note">調整データがまだ少ない場合や接続できない場合は、自動で標準に戻ります。コメントは現在も標準のルールで作成しています。</p>
@@ -5333,7 +5368,7 @@ async function clearAllHistory() {
 function buildHistoryCard(record, index) {
   const totalColor = getScoreColor(record.totalScore);
   const thumbSrc = record.historyThumbSrc || record.imageSrc;
-  const genreLabel = FEEDBACK_GENRE_LABELS[record.estimatedGenre] || 'その他';
+  const genreLabel = getEstimatedGenreDisplayLabel(record.estimatedGenre);
   const modeLabel = getEvaluationModeLabel(record.evaluationMode || 'Rule-based');
   const scoreGapLabel = Number.isFinite(Number(record.scoreGap)) ? `${round(Number(record.scoreGap), 1)}点調整` : '';
 
