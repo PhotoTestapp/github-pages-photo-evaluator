@@ -1086,7 +1086,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 640px;
+    max-width: 920px;
     margin: auto;
     overflow: hidden;
     animation: modalIn 0.25s cubic-bezier(0.16,1,0.3,1);
@@ -1115,8 +1115,37 @@
     transition: background-color 0.15s, color 0.15s;
   }
   .modal-close:hover { background: var(--surface2); color: var(--text); }
-  .modal-img { width: 100%; max-height: 300px; object-fit: contain; background: #000; display: block; }
-  .modal-body { padding: 20px; }
+  .modal-img { width: 100%; max-height: 200px; object-fit: contain; background: #000; display: block; }
+  .modal-body { padding: 16px 18px 18px; }
+  #modal-box .total-card {
+    padding: 22px 20px;
+    margin-bottom: 14px;
+  }
+  #modal-box .total-number {
+    font-size: clamp(3.2rem, 8vw, 4.4rem);
+  }
+  #modal-box .scores-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  #modal-box .score-item {
+    padding: 12px 12px;
+  }
+  #modal-box .score-item-num {
+    font-size: 1.08rem;
+  }
+  #modal-box .ml-summary-card {
+    padding: 14px;
+    margin-top: 12px;
+  }
+  #modal-box .ml-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  #modal-box .ml-summary-item {
+    padding: 10px;
+  }
 
   /* スコアバーの色 */
   .bar-excellent { background: var(--green); }
@@ -1126,6 +1155,10 @@
 
   /* レスポンシブ */
   @media (max-width: 600px) {
+    #modal-box .scores-grid,
+    #modal-box .ml-summary-grid {
+      grid-template-columns: 1fr 1fr;
+    }
     #page-stats .container {
       padding-bottom: 24px;
     }
@@ -2112,7 +2145,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-j';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-l';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -2156,9 +2189,10 @@ const DEFAULT_PUBLIC_FEEDBACK_COLLECTOR_URL = 'https://script.google.com/macros/
 const DEFAULT_REVIEW_MODE = 'general';
 
 const DB_NAME = 'photo_eval_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'history';
 const SOURCE_IMAGE_STORE_NAME = 'source_images';
+const LOCAL_STATS_STORE_NAME = 'local_stats';
 const MAX_HISTORY_ITEMS = 100;
 const HISTORY_RENDER_PAGE_SIZE = 24;
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
@@ -2182,6 +2216,7 @@ let currentUploadId = null;
 let currentBatchId = '';
 let historyRenderLimit = HISTORY_RENDER_PAGE_SIZE;
 let historyNeedsRender = true;
+let historyRecordCache = [];
 let isAutoMovingToNextUpload = false;
 let isEvaluationRunning = false;
 let isFeedbackSaving = false;
@@ -2637,7 +2672,7 @@ function renderLocalHistoryStats(stats = {}) {
 
 async function refreshLocalHistoryStats() {
   try {
-    const history = await loadHistory();
+    const history = await loadLocalStatsHistory();
     renderLocalHistoryStats(buildLocalHistoryStats(history));
   } catch (error) {
     console.error(error);
@@ -5265,6 +5300,9 @@ async function exportLearningData(format) {
 async function saveToHistory(record) {
   const slimRecord = buildHistoryStorageRecord(record);
   await saveHistoryAssetRecord(record);
+  await runStoreOperation('readwrite', store => {
+    store.put(slimRecord);
+  }, LOCAL_STATS_STORE_NAME);
   const overflowImageIds = await runStoreOperation('readwrite', (store, resolve, reject) => {
     const index = store.index('createdAt');
     store.put(slimRecord);
@@ -5309,6 +5347,10 @@ function openHistoryDb() {
       if (!db.objectStoreNames.contains(SOURCE_IMAGE_STORE_NAME)) {
         const sourceStore = db.createObjectStore(SOURCE_IMAGE_STORE_NAME, { keyPath: 'imageId' });
         sourceStore.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(LOCAL_STATS_STORE_NAME)) {
+        const statsStore = db.createObjectStore(LOCAL_STATS_STORE_NAME, { keyPath: 'id' });
+        statsStore.createIndex('createdAt', 'createdAt', { unique: false });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -5357,6 +5399,29 @@ async function loadHistory() {
   });
 }
 
+async function loadLocalStatsHistory() {
+  const statsHistory = await runStoreOperation('readonly', (store, resolve, reject) => {
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const items = request.result || [];
+      items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      resolve(items);
+    };
+    request.onerror = () => reject(request.error);
+  }, LOCAL_STATS_STORE_NAME);
+  if (Array.isArray(statsHistory) && statsHistory.length) {
+    return statsHistory;
+  }
+  const history = await loadHistory();
+  if (!history.length) return [];
+  await runStoreOperation('readwrite', store => {
+    history.forEach(record => {
+      store.put(buildHistoryStorageRecord(record));
+    });
+  }, LOCAL_STATS_STORE_NAME);
+  return history;
+}
+
 async function getRecordById(id) {
   const record = await runStoreOperation('readonly', (store, resolve, reject) => {
     const request = store.get(id);
@@ -5392,6 +5457,7 @@ async function clearAllHistory() {
   }, SOURCE_IMAGE_STORE_NAME);
   latestResultRecord = null;
   modalRecordId = null;
+  historyRecordCache = [];
   updateActionLinks();
   historyNeedsRender = true;
   await refreshLocalHistoryStats();
@@ -5432,6 +5498,7 @@ async function renderHistory() {
 
   try {
     const history = await loadHistory();
+    historyRecordCache = history;
     count.textContent = `${history.length}件`;
     if (!history.length) {
       grid.innerHTML = '';
@@ -5481,9 +5548,21 @@ async function deleteRecord(id, event) {
 }
 
 async function openModal(id) {
+  const cachedRecord = historyRecordCache.find(record => record.id === id);
+  if (cachedRecord) {
+    renderModalRecord({
+      ...cachedRecord,
+      imageSrc: cachedRecord.imageSrc || cachedRecord.historyThumbSrc || '',
+    });
+  }
+  const needsHydration = !cachedRecord || !cachedRecord.imageSrc || !cachedRecord.originalFileHeaderBase64;
+  if (!needsHydration) return;
   const record = await getRecordById(id);
   if (!record) return;
-  renderModalRecord(record);
+  historyRecordCache = historyRecordCache.map(item => item.id === id ? record : item);
+  if (modalRecordId === id) {
+    renderModalRecord(record);
+  }
 }
 
 function closeModal(event) {
@@ -5501,6 +5580,8 @@ function closeModalDirect() {
 async function refreshRecordViews(record, options = {}) {
   const { skipVisibleRender = false } = options;
   await saveToHistory(record);
+  historyRecordCache = historyRecordCache.filter(item => item.id !== record.id);
+  historyRecordCache.unshift(record);
   const upload = uploadQueue.find(item => item.recordId === record.id || item.id === record.uploadId);
   if (upload) {
     upload.recordId = record.id;
