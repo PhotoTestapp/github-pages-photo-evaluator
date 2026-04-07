@@ -2108,7 +2108,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-g';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-07-h';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const FEEDBACK_GENRE_OPTIONS = [
   { code: 'portrait', label: '人物' },
@@ -4246,6 +4246,12 @@ function mapDlPredictedScoresToRuleShape(predictedScores = {}, fallbackScores = 
 }
 
 async function requestDlEstimatedGenre(imageSource, analysis) {
+  if (analysis?.scores?.likelyScreenshot || analysis?.metrics?.fileNameScreenshotHint) {
+    return {
+      genre: 'other',
+      mode: '学習＋',
+    };
+  }
   const dlImageDataUrl = await buildDlCategoryImageDataUrl(imageSource);
   const response = await withTimeout(
     fetch(`${DEFAULT_DL_CATEGORY_API_BASE}/api/dl/predict`, {
