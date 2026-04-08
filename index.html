@@ -2476,7 +2476,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-v';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-w';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -5117,28 +5117,34 @@ async function requestDlEstimatedGenre(imageSource, analysis) {
   );
 
   const dlScores = mapDlPredictedScoresToRuleShape(response?.predictedScores, analysis.scores);
-  const fallbackGenre = estimateGenreFromMetrics(analysis.metrics, dlScores);
+  const dlFallbackGenre = estimateGenreFromMetrics(analysis.metrics, dlScores);
+  const ruleFallbackGenre = estimateGenreFromMetrics(analysis.metrics, analysis.scores);
+  const fallbackGenre = dlFallbackGenre !== 'other'
+    ? dlFallbackGenre
+    : (ruleFallbackGenre !== 'other' ? ruleFallbackGenre : dlFallbackGenre);
   if (response?.predictedGenre) {
     const predictedGenre = String(response.predictedGenre || '').trim();
     const predictedGenreProbability = Number(response?.genreProbabilities?.[predictedGenre] || 0);
     const shouldUseFallbackGenre = predictedGenre === 'landscape'
       ? !shouldAcceptLearningPlusLandscape(analysis.metrics, dlScores, response?.genreProbabilities, fallbackGenre)
-      : Boolean(
-        fallbackGenre &&
-        fallbackGenre !== predictedGenre &&
-        fallbackGenre !== 'other' &&
-        predictedGenreProbability > 0 &&
-        predictedGenreProbability < 0.45
-      );
+      : predictedGenre === 'other'
+        ? Boolean(fallbackGenre && fallbackGenre !== 'other')
+        : Boolean(
+          fallbackGenre &&
+          fallbackGenre !== predictedGenre &&
+          fallbackGenre !== 'other' &&
+          predictedGenreProbability > 0 &&
+          predictedGenreProbability < 0.45
+        );
     // UI統一用の表示名です。内部のDLカテゴリ処理やフォールバック経路とは完全一致しない場合があります。
     // 変更時は本番・ローカル・ラボの表示整合を必ず確認してください。
     return {
-      genre: shouldUseFallbackGenre ? fallbackGenre : predictedGenre,
+      genre: shouldUseFallbackGenre ? fallbackGenre : (predictedGenre || fallbackGenre || 'other'),
       mode: '学習＋',
     };
   }
   return {
-    genre: fallbackGenre,
+    genre: fallbackGenre || ruleFallbackGenre || 'other',
     mode: '学習＋',
   };
 }
