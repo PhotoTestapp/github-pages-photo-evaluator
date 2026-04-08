@@ -3981,6 +3981,10 @@ function updateEvalButtonState(upload = getActiveUpload()) {
   evalButton.disabled = !isUploadReadyForEvaluation(upload);
 }
 
+function areAllUploadsEvaluated() {
+  return uploadQueue.length > 0 && uploadQueue.every(item => Boolean(item?.evaluationResult));
+}
+
 async function selectUploadItem(uploadId) {
   if (isUiLocked) return;
   persistCurrentFeedbackDraft();
@@ -5713,30 +5717,12 @@ function buildFeedbackSectionHtml(record) {
       </div>
       <div class="feedback-actions">
         <button class="btn-feedback" onclick="saveFeedbackForLatest()">感想を保存する</button>
-        <button class="btn-feedback" type="button" onclick="goToNextPhotoFromResult()" ${hasNextUploadAfterCurrent() ? '' : 'disabled'}>次の写真を見る</button>
-        <button class="btn-feedback" type="button" onclick="resetAll()">新しい写真をチェックする</button>
+        <button class="btn-feedback" type="button" onclick="resetAll()" ${areAllUploadsEvaluated() ? '' : 'disabled'}>新しい写真をチェックする</button>
         <span class="feedback-status" id="feedback-status">${escapeHtml(feedback.status || '')}</span>
       </div>
       <p class="feedback-note">保存されるのは点数や特徴量、補正点、写真の種類などです。画像そのものは精度改善用データに含まれません。</p>
     </div>
   `;
-}
-
-function hasNextUploadAfterCurrent() {
-  const currentIndex = uploadQueue.findIndex(item => item.id === currentUploadId);
-  if (currentIndex < 0) return false;
-  return uploadQueue.slice(currentIndex + 1).some(item => item.status !== 'saved');
-}
-
-function goToNextPhotoFromResult() {
-  moveToNextUploadAfterFeedback().then(moved => {
-    if (!moved) {
-      showError('次に進める写真がありません');
-    }
-  }).catch(error => {
-    console.error(error);
-    showError(error.message || '次の写真へ進めませんでした');
-  });
 }
 
 function openHistoryFromResult() {
@@ -5816,7 +5802,7 @@ function renderCurrentRecord(record) {
   }
   const resultActions = document.querySelector('#result-section .result-actions');
   if (resultActions) {
-    resultActions.innerHTML = '<button class="btn-reset" onclick="resetAll()">別の写真をチェックする</button>';
+    resultActions.innerHTML = `<button class="btn-reset" onclick="resetAll()" ${areAllUploadsEvaluated() ? '' : 'disabled'}>新しい写真をチェックする</button>`;
   }
   document.getElementById('result-inner').innerHTML = buildResultHTML(record, { includeFeedback: true });
   syncFeedbackGenreButtons();
