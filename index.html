@@ -214,6 +214,39 @@
     gap: 8px;
     flex-wrap: wrap;
   }
+  .stats-action-btn {
+    min-height: 42px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 10px 22px rgba(79,141,247,0.16);
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+  }
+  .stats-action-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+  }
+  .stats-action-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(79,141,247,0.16), 0 12px 24px rgba(79,141,247,0.2);
+  }
+  .stats-action-btn.apply {
+    background: linear-gradient(135deg, #119c73, #39c79a);
+    border-color: rgba(17,156,115,0.36);
+    box-shadow: 0 10px 22px rgba(17,156,115,0.2);
+  }
+  .stats-action-btn.export {
+    background: linear-gradient(135deg, #2f76ea, #69b2ff);
+    border-color: rgba(47,118,234,0.3);
+  }
   .public-stats-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1275,6 +1308,13 @@
     .public-stats-control {
       flex: 1 1 140px;
     }
+    .public-stats-actions {
+      width: 100%;
+    }
+    .stats-action-btn {
+      flex: 1 1 180px;
+      justify-content: center;
+    }
     .public-stats-mobile-tabs {
       display: none;
     }
@@ -2130,8 +2170,8 @@
             <input id="local-stats-end-date" type="date">
           </div>
           <div class="public-stats-actions">
-            <button type="button" class="btn-secondary" onclick="applyLocalStatsDateRange()">期間を反映</button>
-            <button type="button" class="btn-secondary" onclick="exportLocalStatsPdf()">結果をPDF出力</button>
+            <button type="button" class="stats-action-btn apply" onclick="applyLocalStatsDateRange()">更新 期間を反映</button>
+            <button type="button" class="stats-action-btn export" onclick="exportLocalStatsPdf()">PDF 結果を出力</button>
           </div>
         </div>
       </div>
@@ -2269,7 +2309,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-c';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-d';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
