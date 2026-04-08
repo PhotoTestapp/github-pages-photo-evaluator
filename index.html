@@ -2269,7 +2269,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-b';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-c';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -2994,17 +2994,37 @@ function exportLocalStatsPdf() {
         .section-green { background: linear-gradient(180deg, var(--accent-soft), #ffffff); }
         .section-warm { background: linear-gradient(180deg, var(--warm-soft), #ffffff); }
         .section-navy { background: linear-gradient(180deg, #e8eefc, #ffffff); }
-        .actions { margin: 16px 0 24px; }
+        .actions {
+          margin: 18px 0 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+          background: #edf5ff;
+          border: 1px solid #c9dcff;
+          border-radius: 16px;
+          padding: 14px 16px;
+        }
+        .actions-note {
+          font-size: 13px;
+          color: #476485;
+          font-weight: 600;
+        }
         .actions button {
-          padding: 10px 14px;
-          border: 1px solid #c6d8fb;
-          border-radius: 10px;
-          background: #ffffff;
-          color: var(--brand);
+          padding: 12px 18px;
+          border: 1px solid #2f76ea;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #2f76ea, #69b2ff);
+          color: #ffffff;
           cursor: pointer;
           font: inherit;
           font-weight: 700;
-          box-shadow: 0 8px 18px rgba(47, 118, 234, 0.08);
+          box-shadow: 0 10px 22px rgba(47, 118, 234, 0.22);
+          letter-spacing: 0.02em;
+        }
+        .actions button:hover {
+          filter: brightness(1.03);
         }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; overflow: hidden; border-radius: 12px; }
         th, td {
@@ -3030,6 +3050,12 @@ function exportLocalStatsPdf() {
           body { margin: 18px; }
           .hero { padding: 18px 18px 16px; }
           .summary-grid { grid-template-columns: 1fr; }
+          .actions {
+            align-items: stretch;
+          }
+          .actions button {
+            width: 100%;
+          }
         }
         @media print {
           .actions { display: none; }
@@ -3053,6 +3079,7 @@ function exportLocalStatsPdf() {
         </div>
       </div>
       <div class="actions">
+        <div class="actions-note">右の青いボタンからPDF保存または印刷を実行できます。</div>
         <button type="button" onclick="window.print()">PDFとして保存 / 印刷</button>
       </div>
 
