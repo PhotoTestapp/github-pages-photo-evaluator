@@ -181,6 +181,25 @@
     color: var(--text-muted);
     font-size: 0.78rem;
   }
+  .public-collapse-toggle {
+    min-height: 40px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(183,206,241,0.92);
+    background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(238,245,255,0.82));
+    color: #30517a;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .public-collapse-toggle:hover {
+    border-color: rgba(120,162,230,0.82);
+    color: #2f76ea;
+  }
+  .public-collapsible-content[hidden] {
+    display: none !important;
+  }
   .public-stats-controls {
     display: flex;
     align-items: flex-end;
@@ -594,6 +613,53 @@
 
   /* ── 結果エリア ── */
   #result-section { display: none; margin-top: 32px; }
+  .result-title-wrap {
+    display: grid;
+    gap: 6px;
+  }
+  .result-sub {
+    color: #62758e;
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+  .result-action-btn {
+    min-height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(183,206,241,0.9);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.15s, filter 0.15s, box-shadow 0.15s;
+  }
+  .result-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+  }
+  .result-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .result-action-btn.next {
+    background: linear-gradient(135deg, rgba(17,156,115,0.94), rgba(57,199,154,0.88));
+    color: #fff;
+    border-color: rgba(17,156,115,0.32);
+    box-shadow: 0 12px 24px rgba(17,156,115,0.16);
+  }
+  .result-action-btn.history {
+    background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(238,245,255,0.82));
+    color: #30517a;
+    border-color: rgba(183,206,241,0.9);
+  }
+  .result-secondary-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 
   .result-header {
     display: flex;
@@ -628,7 +694,6 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 32px 24px;
-    text-align: center;
     margin-bottom: 20px;
     position: relative;
     overflow: hidden;
@@ -662,6 +727,39 @@
     font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.06em;
+  }
+  .total-card-main {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.95fr) minmax(0, 1.05fr);
+    gap: 16px;
+    align-items: center;
+  }
+  .total-score-main {
+    text-align: center;
+  }
+  .total-score-breakdown {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 0;
+    text-align: left;
+  }
+  .total-score-chip {
+    background: rgba(255,255,255,0.76);
+    border: 1px solid rgba(214,225,242,0.92);
+    border-radius: 14px;
+    padding: 10px 12px;
+  }
+  .total-score-chip-label {
+    display: block;
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .total-score-chip-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
   }
 
   /* 項目スコアグリッド */
@@ -1198,6 +1296,21 @@
   #modal-box .score-item {
     padding: 12px 12px;
   }
+  #modal-box .score-item.simple {
+    padding: 10px 12px;
+  }
+  #modal-box .score-item.simple .score-item-header {
+    margin-bottom: 0;
+  }
+  #modal-box .score-item.simple .score-item-label {
+    font-size: 0.74rem;
+  }
+  #modal-box .score-item.simple .score-item-num {
+    font-size: 1rem;
+  }
+  #modal-box .score-item.simple .score-bar-track {
+    display: none;
+  }
   #modal-box .score-item-num {
     font-size: 1.08rem;
   }
@@ -1211,6 +1324,16 @@
   }
   #modal-box .ml-summary-item {
     padding: 10px;
+  }
+  #modal-box .detail-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 14px;
+    align-items: start;
+  }
+  #modal-box .detail-side {
+    display: grid;
+    gap: 12px;
   }
 
   /* スコアバーの色 */
@@ -1238,6 +1361,10 @@
     }
     .modal-body {
       padding: 12px;
+    }
+    .total-card-main {
+      grid-template-columns: 1fr;
+      gap: 12px;
     }
     #modal-box .total-card {
       padding: 16px 14px;
@@ -1267,6 +1394,10 @@
     }
     #modal-box .score-item-num {
       font-size: 0.92rem;
+    }
+    #modal-box .detail-layout {
+      grid-template-columns: 1fr;
+      gap: 10px;
     }
     #modal-box .ml-summary-card {
       padding: 10px;
@@ -1353,6 +1484,9 @@
       font-size: 0.56rem;
       line-height: 1.15;
     }
+    .total-score-breakdown { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .total-score-chip { padding: 8px 9px; }
+    .total-score-chip-value { font-size: 0.9rem; }
     .scores-grid { grid-template-columns: 1fr 1fr; }
     .container { padding: 24px 16px 60px; }
     .preview-bar, .result-header { align-items: flex-start; }
@@ -2126,34 +2260,6 @@
     <h1 class="page-title">統計</h1>
     <p class="page-sub">学習データを集計した総合点・カテゴリ・項目別の傾向を確認できます。</p>
 
-    <section class="public-stats-panel" id="public-stats-panel">
-      <div class="public-stats-head">
-        <div>
-          <p class="public-stats-title">統計</p>
-          <p class="public-stats-note" id="public-stats-note"></p>
-        </div>
-      </div>
-      <div class="public-stats-mobile-tabs" id="public-stats-mobile-tabs">
-        <button type="button" class="public-stats-mobile-tab active" onclick="showPublicStatsCard(0)">総合点</button>
-        <button type="button" class="public-stats-mobile-tab" onclick="showPublicStatsCard(1)">カテゴリ</button>
-        <button type="button" class="public-stats-mobile-tab" onclick="showPublicStatsCard(2)">項目別</button>
-      </div>
-      <div class="public-stats-grid">
-        <article class="public-chart-card active">
-          <h2 class="public-chart-title">総合点ヒストグラム</h2>
-          <div id="public-score-histogram" class="public-histogram"></div>
-        </article>
-        <article class="public-chart-card">
-          <h2 class="public-chart-title">カテゴリ分布</h2>
-          <div id="public-genre-chart" class="public-bar-chart"></div>
-        </article>
-        <article class="public-chart-card">
-          <h2 class="public-chart-title">項目別平均</h2>
-          <div id="public-item-averages" class="public-bar-chart"></div>
-        </article>
-      </div>
-    </section>
-
     <section class="public-stats-panel" id="local-stats-panel">
       <div class="public-stats-head">
         <div>
@@ -2210,6 +2316,37 @@
           <h2 class="public-chart-title">項目別平均</h2>
           <div id="local-item-averages" class="public-bar-chart"></div>
         </article>
+      </div>
+    </section>
+
+    <section class="public-stats-panel" id="public-stats-panel">
+      <div class="public-stats-head">
+        <div>
+          <p class="public-stats-title">全体の統計</p>
+          <p class="public-stats-note" id="public-stats-note"></p>
+        </div>
+        <button type="button" class="public-collapse-toggle" id="public-stats-toggle" onclick="togglePublicStatsPanel()">全体の統計を表示</button>
+      </div>
+      <div class="public-collapsible-content" id="public-stats-content" hidden>
+        <div class="public-stats-mobile-tabs" id="public-stats-mobile-tabs">
+          <button type="button" class="public-stats-mobile-tab active" onclick="showPublicStatsCard(0)">総合点</button>
+          <button type="button" class="public-stats-mobile-tab" onclick="showPublicStatsCard(1)">カテゴリ</button>
+          <button type="button" class="public-stats-mobile-tab" onclick="showPublicStatsCard(2)">項目別</button>
+        </div>
+        <div class="public-stats-grid">
+          <article class="public-chart-card active">
+            <h2 class="public-chart-title">総合点ヒストグラム</h2>
+            <div id="public-score-histogram" class="public-histogram"></div>
+          </article>
+          <article class="public-chart-card">
+            <h2 class="public-chart-title">カテゴリ分布</h2>
+            <div id="public-genre-chart" class="public-bar-chart"></div>
+          </article>
+          <article class="public-chart-card">
+            <h2 class="public-chart-title">項目別平均</h2>
+            <div id="public-item-averages" class="public-bar-chart"></div>
+          </article>
+        </div>
       </div>
     </section>
   </div>
@@ -2309,7 +2446,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-d';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-l';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -2919,8 +3056,24 @@ function applyLocalStatsDateRange() {
   void refreshLocalHistoryStats();
 }
 
-function exportLocalStatsPdf() {
-  const stats = latestLocalStatsSnapshot;
+async function exportLocalStatsPdf() {
+  const startInput = document.getElementById('local-stats-start-date');
+  const endInput = document.getElementById('local-stats-end-date');
+  const startDate = startInput?.value || localStatsDateRange.start || '';
+  const endDate = endInput?.value || localStatsDateRange.end || '';
+  if (startDate && endDate && startDate > endDate) {
+    showError('開始日は終了日以前にしてください');
+    return;
+  }
+  let stats = latestLocalStatsSnapshot;
+  try {
+    const history = await loadLocalStatsHistory();
+    stats = buildLocalHistoryStats(history, { startDate, endDate });
+  } catch (error) {
+    console.error(error);
+    showError('PDF出力用の集計を作成できませんでした');
+    return;
+  }
   if (!stats) {
     showError('先に端末統計を表示してください');
     return;
@@ -3183,6 +3336,16 @@ function showPublicStatsCard(index = 0) {
   tabs.forEach((tab, tabIndex) => {
     tab.classList.toggle('active', tabIndex === index);
   });
+}
+
+function togglePublicStatsPanel(forceExpanded = null) {
+  const content = document.getElementById('public-stats-content');
+  const button = document.getElementById('public-stats-toggle');
+  if (!content || !button) return;
+  const nextExpanded = forceExpanded == null ? content.hidden : !forceExpanded;
+  content.hidden = nextExpanded;
+  const isExpanded = !content.hidden;
+  button.textContent = isExpanded ? '全体の統計を閉じる' : '全体の統計を表示';
 }
 
 async function loadPublicStats() {
@@ -5377,15 +5540,29 @@ function buildDeliveryHtml(record) {
   return '';
 }
 
-function buildMlSummaryHtml(record) {
+function buildMlSummaryHtml(record, options = {}) {
   const evaluationMode = record.evaluationMode || 'Rule-based';
   const usesMl = evaluationMode === 'ML-assisted';
   const evaluationModeLabel = getEvaluationModeLabel(evaluationMode);
-  const modelVersion = record.modelVersion || '未学習';
   const ruleScore = record.ruleBasedScores?.totalScore ?? record.totalScore;
-  const scoreGap = Number.isFinite(record.scoreGap) ? record.scoreGap : 0;
   const estimatedGenreLabel = getEstimatedGenreDisplayLabel(record.estimatedGenre);
   const categoryEstimateModeLabel = record.categoryEstimateMode || '';
+  const compact = Boolean(options.compact);
+  const selectedGenres = normalizeFeedbackGenreValues(record?.feedback?.genre || '');
+  const userGenreLabel = selectedGenres.length
+    ? selectedGenres.map(code => FEEDBACK_GENRE_LABELS[code] || getPublicGenreLabel(code)).join(' / ')
+    : '未指定';
+  const detailItems = compact ? [
+    ['方式', evaluationModeLabel],
+    ['標準点', String(ruleScore)],
+    ['推定カテゴリ', categoryEstimateModeLabel ? `${estimatedGenreLabel}（${categoryEstimateModeLabel}）` : estimatedGenreLabel],
+    ['ユーザー指定カテゴリ', userGenreLabel],
+  ] : [
+    ['現在のチェック方式', evaluationModeLabel],
+    ['標準の総合点', String(ruleScore)],
+    ['自動調整', `${Number.isFinite(record.scoreGap) ? record.scoreGap : 0}点`],
+    ['推定カテゴリ', categoryEstimateModeLabel ? `${estimatedGenreLabel}（${categoryEstimateModeLabel}）` : estimatedGenreLabel],
+  ];
 
   return `
     <div class="ml-summary-card">
@@ -5394,26 +5571,12 @@ function buildMlSummaryHtml(record) {
         <span class="status-pill ${usesMl ? 'ml' : 'rule'}">${escapeHtml(evaluationModeLabel)}</span>
       </div>
       <div class="ml-summary-grid">
-        <div class="ml-summary-item">
-          <span class="summary-label">現在のチェック方式</span>
-          <span class="summary-value">${escapeHtml(evaluationModeLabel)}</span>
-        </div>
-        <div class="ml-summary-item">
-          <span class="summary-label">調整データの版</span>
-          <span class="summary-value">${escapeHtml(modelVersion === '未学習' ? 'まだ調整前' : modelVersion)}</span>
-        </div>
-        <div class="ml-summary-item">
-          <span class="summary-label">標準の総合点</span>
-          <span class="summary-value">${escapeHtml(String(ruleScore))}</span>
-        </div>
-        <div class="ml-summary-item">
-          <span class="summary-label">自動調整</span>
-          <span class="summary-value">${escapeHtml(`${scoreGap}点`)}</span>
-        </div>
-        <div class="ml-summary-item">
-          <span class="summary-label">推定カテゴリ</span>
-          <span class="summary-value">${escapeHtml(categoryEstimateModeLabel ? `${estimatedGenreLabel}（${categoryEstimateModeLabel}）` : estimatedGenreLabel)}</span>
-        </div>
+        ${detailItems.map(([label, value]) => `
+          <div class="ml-summary-item">
+            <span class="summary-label">${escapeHtml(label)}</span>
+            <span class="summary-value">${escapeHtml(value)}</span>
+          </div>
+        `).join('')}
       </div>
     </div>
   `;
@@ -5504,6 +5667,7 @@ function buildFeedbackSectionHtml(record) {
       </div>
       <div class="feedback-actions">
         <button class="btn-feedback" onclick="saveFeedbackForLatest()">感想を保存する</button>
+        <button class="btn-feedback" type="button" onclick="goToNextPhotoFromResult()" ${hasNextUploadAfterCurrent() ? '' : 'disabled'}>次の写真を見る</button>
         <span class="feedback-status" id="feedback-status">${escapeHtml(feedback.status || '')}</span>
       </div>
       <p class="feedback-note">保存されるのは点数や特徴量、補正点、写真の種類などです。画像そのものは精度改善用データに含まれません。</p>
@@ -5511,10 +5675,32 @@ function buildFeedbackSectionHtml(record) {
   `;
 }
 
+function hasNextUploadAfterCurrent() {
+  const currentIndex = uploadQueue.findIndex(item => item.id === currentUploadId);
+  if (currentIndex < 0) return false;
+  return uploadQueue.slice(currentIndex + 1).some(item => item.status !== 'saved');
+}
+
+function goToNextPhotoFromResult() {
+  moveToNextUploadAfterFeedback().then(moved => {
+    if (!moved) {
+      showError('次に進める写真がありません');
+    }
+  }).catch(error => {
+    console.error(error);
+    showError(error.message || '次の写真へ進めませんでした');
+  });
+}
+
+function openHistoryFromResult() {
+  showPage('history');
+}
+
 function buildResultHTML(record, options = {}) {
   const totalColor = getScoreColor(record.totalScore);
   const scoreItems = SCORE_ITEMS;
   const includeFeedback = Boolean(options.includeFeedback);
+  const compactHistoryDetail = Boolean(options.compactHistoryDetail);
   const badgeBackground = record.totalScore >= 85 ? 'var(--green-dim)'
     : record.totalScore >= 70 ? 'var(--blue-dim)'
       : record.totalScore >= 50 ? 'var(--amber-dim)'
@@ -5524,31 +5710,50 @@ function buildResultHTML(record, options = {}) {
     const score = record[item.key];
     const color = getScoreColor(score);
     return `
-      <div class="score-item">
+      <div class="score-item ${compactHistoryDetail ? 'simple' : ''}">
         <div class="score-item-header">
           <div class="score-item-label">${item.icon} ${item.label}</div>
           <div class="score-item-num" style="color:${color.text}">${score}</div>
         </div>
-        <div class="score-bar-track">
-          <div class="score-bar-fill ${color.bar}" data-score="${score}" style="width:0%"></div>
-        </div>
+        ${compactHistoryDetail ? '' : `
+          <div class="score-bar-track">
+            <div class="score-bar-fill ${color.bar}" data-score="${score}" style="width:0%"></div>
+          </div>
+        `}
       </div>
     `;
   }).join('');
 
   return `
     <div class="total-card">
-      <p class="total-label">TOTAL SCORE</p>
-      <div>
-        <span class="total-number ${totalColor.badge}" style="color:${totalColor.text}">${record.totalScore}</span>
-        <span class="total-unit">/100</span>
+      <div class="total-card-main">
+        <div class="total-score-main">
+          <p class="total-label">TOTAL SCORE</p>
+          <div>
+            <span class="total-number ${totalColor.badge}" style="color:${totalColor.text}">${record.totalScore}</span>
+            <span class="total-unit">/100</span>
+          </div>
+          <span class="total-badge" style="color:${totalColor.text};background:${badgeBackground}">${totalColor.label}</span>
+        </div>
+        ${`
+          <div class="total-score-breakdown">
+            ${scoreItems.map(item => `
+              <div class="total-score-chip">
+                <span class="total-score-chip-label">${item.label}</span>
+                <span class="total-score-chip-value" style="color:${getScoreColor(record[item.key]).text}">${record[item.key]}</span>
+              </div>
+            `).join('')}
+          </div>
+        `}
       </div>
-      <span class="total-badge" style="color:${totalColor.text};background:${badgeBackground}">${totalColor.label}</span>
     </div>
 
-    <div class="scores-grid">${scoreCardsHtml}</div>
+    <div class="${compactHistoryDetail ? 'detail-layout' : ''}">
+      ${compactHistoryDetail ? '' : ''}
+      ${compactHistoryDetail ? `<div class="detail-side">${buildMlSummaryHtml(record, { compact: true })}</div>` : ''}
+    </div>
 
-    ${buildMlSummaryHtml(record)}
+    ${compactHistoryDetail ? '' : buildMlSummaryHtml(record)}
     ${includeFeedback ? buildFeedbackSectionHtml(record) : ''}
     ${buildDeliveryHtml(record)}
   `;
@@ -5558,6 +5763,14 @@ function renderCurrentRecord(record) {
   latestResultRecord = record;
   document.getElementById('loading').style.display = 'none';
   document.getElementById('result-section').style.display = 'block';
+  const resultTitle = document.querySelector('#result-section .result-title');
+  if (resultTitle) {
+    resultTitle.textContent = '✦ チェック結果';
+  }
+  const resultActions = document.querySelector('#result-section .result-actions');
+  if (resultActions) {
+    resultActions.innerHTML = '<button class="btn-reset" onclick="resetAll()">別の写真をチェックする</button>';
+  }
   document.getElementById('result-inner').innerHTML = buildResultHTML(record, { includeFeedback: true });
   syncFeedbackGenreButtons();
   updateActionLinks(record);
@@ -5568,10 +5781,9 @@ function renderModalRecord(record) {
   modalRecordId = record.id;
   document.getElementById('modal-title').textContent = `チェック結果の詳細 — ${formatDate(record.createdAt)}`;
   document.getElementById('modal-img').src = record.imageSrc;
-  document.getElementById('modal-body').innerHTML = buildResultHTML(record);
+  document.getElementById('modal-body').innerHTML = buildResultHTML(record, { compactHistoryDetail: true });
   document.getElementById('modal-overlay').classList.add('active');
   updateActionLinks(record);
-  renderScoreBars(document.getElementById('modal-body'));
 }
 
 function setSegmentedValue(selectId, value, event) {
