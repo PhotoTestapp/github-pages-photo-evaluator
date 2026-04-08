@@ -1495,10 +1495,18 @@
     .total-score-breakdown { grid-template-columns: 1fr 1fr; gap: 6px; }
     .total-score-chip { padding: 8px 9px; }
     .total-score-chip-value { font-size: 0.9rem; }
-    .scores-grid { grid-template-columns: 1fr 1fr; }
+    .scores-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
     .container { padding: 24px 16px 60px; }
     .preview-bar, .result-header { align-items: flex-start; }
-    .ml-summary-grid, .feedback-grid { grid-template-columns: 1fr; }
+    .score-item { padding: 10px 8px; }
+    .score-item-header { margin-bottom: 8px; }
+    .score-item-label { gap: 4px; font-size: 0.68rem; }
+    .score-item-num { font-size: 0.94rem; }
+    .ml-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .ml-summary-item { padding: 10px; }
+    .summary-label { font-size: 0.68rem; }
+    .summary-value { font-size: 0.84rem; }
+    .feedback-grid { grid-template-columns: 1fr; }
     .history-card {
       grid-template-columns: 1fr;
     }
@@ -1514,7 +1522,8 @@
     }
   }
   @media (max-width: 380px) {
-    .scores-grid { grid-template-columns: 1fr; }
+    .scores-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ml-summary-grid { grid-template-columns: 1fr; }
     .history-card-footer { flex-direction: column; }
     .btn-detail, .btn-delete { width: 100%; }
   }
@@ -1860,6 +1869,15 @@
       0 0 0 1px rgba(79,141,247,0.28),
       inset 0 1px 0 rgba(255,255,255,0.38),
       0 20px 38px rgba(79,141,247,0.32);
+  }
+  .btn-feedback:disabled {
+    background: linear-gradient(135deg, rgba(202,214,231,0.96), rgba(224,232,243,0.92));
+    color: #7f8ea3;
+    border-color: rgba(255,255,255,0.4);
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+    opacity: 1;
   }
 
   .segmented-btn {
@@ -2454,7 +2472,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-r';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-s';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
