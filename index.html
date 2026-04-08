@@ -1492,9 +1492,10 @@
       font-size: 0.56rem;
       line-height: 1.15;
     }
-    .total-score-breakdown { grid-template-columns: 1fr 1fr; gap: 6px; }
-    .total-score-chip { padding: 8px 9px; }
-    .total-score-chip-value { font-size: 0.9rem; }
+    .total-score-breakdown { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .total-score-chip { padding: 8px 7px; border-radius: 12px; }
+    .total-score-chip-label { font-size: 0.62rem; margin-bottom: 3px; }
+    .total-score-chip-value { font-size: 0.86rem; }
     .scores-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
     .container { padding: 24px 16px 60px; }
     .preview-bar, .result-header { align-items: flex-start; }
@@ -1522,6 +1523,10 @@
     }
   }
   @media (max-width: 380px) {
+    .total-score-breakdown { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+    .total-score-chip { padding: 7px 6px; }
+    .total-score-chip-label { font-size: 0.58rem; }
+    .total-score-chip-value { font-size: 0.82rem; }
     .scores-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .ml-summary-grid { grid-template-columns: 1fr; }
     .history-card-footer { flex-direction: column; }
@@ -2472,7 +2477,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-s';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-u';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -5815,12 +5820,27 @@ function renderCurrentRecord(record) {
   renderScoreBars(document.getElementById('result-section'));
 }
 
-function renderModalRecord(record) {
+function renderModalShell(record) {
   modalRecordId = record.id;
   document.getElementById('modal-title').textContent = `チェック結果の詳細 — ${formatDate(record.createdAt)}`;
   document.getElementById('modal-img').src = record.imageSrc;
-  document.getElementById('modal-body').innerHTML = buildResultHTML(record, { compactHistoryDetail: true });
   document.getElementById('modal-overlay').classList.add('active');
+}
+
+function renderModalRecord(record, options = {}) {
+  const { deferBody = false } = options;
+  renderModalShell(record);
+  const renderBody = () => {
+    if (modalRecordId !== record.id) return;
+    document.getElementById('modal-body').innerHTML = buildResultHTML(record, { compactHistoryDetail: true });
+    updateActionLinks(record);
+  };
+  if (deferBody) {
+    document.getElementById('modal-body').innerHTML = '<div class="public-stats-empty">詳細を読み込んでいます...</div>';
+    requestAnimationFrame(renderBody);
+    return;
+  }
+  document.getElementById('modal-body').innerHTML = buildResultHTML(record, { compactHistoryDetail: true });
   updateActionLinks(record);
 }
 
@@ -6264,6 +6284,26 @@ async function getRecordById(id) {
   return hydrateHistoryRecord(record);
 }
 
+function scheduleHistoryHydration(records = []) {
+  const targets = records.filter(record => record && (!record.imageSrc || !record.originalFileHeaderBase64));
+  if (!targets.length) return;
+  const run = () => {
+    targets.forEach(record => {
+      hydrateHistoryRecord(record).then(hydrated => {
+        if (!hydrated) return;
+        historyRecordCache = historyRecordCache.map(item => item.id === hydrated.id ? hydrated : item);
+      }).catch(error => {
+        console.warn('History hydration skipped', error);
+      });
+    });
+  };
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(run, { timeout: 1200 });
+    return;
+  }
+  setTimeout(run, 120);
+}
+
 async function deleteFromHistory(id) {
   const record = await runStoreOperation('readonly', (store, resolve, reject) => {
     const request = store.get(id);
@@ -6354,6 +6394,7 @@ async function renderHistory() {
         </button>
       ` : ''}
     `;
+    scheduleHistoryHydration(visibleItems.slice(0, 12));
     historyNeedsRender = false;
   } catch (error) {
     console.error(error);
@@ -6390,7 +6431,7 @@ async function openModal(id) {
     renderModalRecord({
       ...cachedRecord,
       imageSrc: cachedRecord.imageSrc || cachedRecord.historyThumbSrc || '',
-    });
+    }, { deferBody: true });
   }
   const needsHydration = !cachedRecord || !cachedRecord.imageSrc || !cachedRecord.originalFileHeaderBase64;
   if (!needsHydration) return;
