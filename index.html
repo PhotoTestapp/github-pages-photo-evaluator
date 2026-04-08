@@ -2412,7 +2412,6 @@
     <div class="modal-header">
       <span class="modal-title" id="modal-title">チェック結果の詳細</span>
       <div class="result-actions">
-        <a class="btn-secondary" id="download-modal-photo" href="#" download>画像を保存</a>
         <button class="modal-close" onclick="closeModalDirect()">✕</button>
       </div>
     </div>
@@ -2477,7 +2476,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-u';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-v';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -4019,7 +4018,6 @@ async function selectUploadItem(uploadId) {
 function updateActionLinks(record = null) {
   const previewLink = document.getElementById('download-current-photo');
   const resultLink = document.getElementById('download-result-photo');
-  const modalLink = document.getElementById('download-modal-photo');
 
   const setLinkState = (link, enabled, href, name) => {
     if (!link) return;
@@ -4038,7 +4036,6 @@ function updateActionLinks(record = null) {
 
   setLinkState(previewLink, Boolean(currentFileUrl && currentFile), currentFileUrl, currentFile?.name || '');
   setLinkState(resultLink, Boolean(record?.imageSrc), record?.imageSrc || '', record?.fileName || '');
-  setLinkState(modalLink, Boolean(record?.imageSrc), record?.imageSrc || '', record?.fileName || '');
 }
 
 function showPage(name) {
@@ -5711,6 +5708,7 @@ function buildFeedbackSectionHtml(record) {
       <div class="feedback-actions">
         <button class="btn-feedback" onclick="saveFeedbackForLatest()">感想を保存する</button>
         <button class="btn-feedback" type="button" onclick="goToNextPhotoFromResult()" ${hasNextUploadAfterCurrent() ? '' : 'disabled'}>次の写真を見る</button>
+        <button class="btn-feedback" type="button" onclick="resetAll()">新しい写真をチェックする</button>
         <span class="feedback-status" id="feedback-status">${escapeHtml(feedback.status || '')}</span>
       </div>
       <p class="feedback-note">保存されるのは点数や特徴量、補正点、写真の種類などです。画像そのものは精度改善用データに含まれません。</p>
@@ -6450,9 +6448,16 @@ function closeModal(event) {
 }
 
 function closeModalDirect() {
-  document.getElementById('modal-overlay').classList.remove('active');
+  const overlay = document.getElementById('modal-overlay');
+  const modalImage = document.getElementById('modal-img');
+  const modalBody = document.getElementById('modal-body');
+  overlay.classList.remove('active');
   modalRecordId = null;
-  updateActionLinks(latestResultRecord);
+  requestAnimationFrame(() => {
+    if (modalRecordId !== null) return;
+    modalImage.src = '';
+    modalBody.innerHTML = '';
+  });
 }
 
 async function refreshRecordViews(record, options = {}) {
