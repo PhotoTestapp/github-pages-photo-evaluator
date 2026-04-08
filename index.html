@@ -3981,8 +3981,15 @@ function updateEvalButtonState(upload = getActiveUpload()) {
   evalButton.disabled = !isUploadReadyForEvaluation(upload);
 }
 
-function areAllUploadsEvaluated() {
-  return uploadQueue.length > 0 && uploadQueue.every(item => Boolean(item?.evaluationResult));
+function canStartNewPhotoCheck(upload = getActiveUpload()) {
+  return Boolean(upload?.evaluationResult?.feedback?.savedAt);
+}
+
+function syncNewPhotoCheckButtons(upload = getActiveUpload()) {
+  const enabled = canStartNewPhotoCheck(upload);
+  document.querySelectorAll('[data-new-photo-check]').forEach(button => {
+    button.disabled = !enabled;
+  });
 }
 
 async function selectUploadItem(uploadId) {
@@ -5717,7 +5724,7 @@ function buildFeedbackSectionHtml(record) {
       </div>
       <div class="feedback-actions">
         <button class="btn-feedback" onclick="saveFeedbackForLatest()">感想を保存する</button>
-        <button class="btn-feedback" type="button" onclick="resetAll()" ${areAllUploadsEvaluated() ? '' : 'disabled'}>新しい写真をチェックする</button>
+        <button class="btn-feedback" type="button" data-new-photo-check onclick="resetAll()" ${canStartNewPhotoCheck() ? '' : 'disabled'}>新しい写真をチェックする</button>
         <span class="feedback-status" id="feedback-status">${escapeHtml(feedback.status || '')}</span>
       </div>
       <p class="feedback-note">保存されるのは点数や特徴量、補正点、写真の種類などです。画像そのものは精度改善用データに含まれません。</p>
@@ -5802,10 +5809,11 @@ function renderCurrentRecord(record) {
   }
   const resultActions = document.querySelector('#result-section .result-actions');
   if (resultActions) {
-    resultActions.innerHTML = `<button class="btn-reset" onclick="resetAll()" ${areAllUploadsEvaluated() ? '' : 'disabled'}>新しい写真をチェックする</button>`;
+    resultActions.innerHTML = `<button class="btn-reset" type="button" data-new-photo-check onclick="resetAll()" ${canStartNewPhotoCheck() ? '' : 'disabled'}>新しい写真をチェックする</button>`;
   }
   document.getElementById('result-inner').innerHTML = buildResultHTML(record, { includeFeedback: true });
   syncFeedbackGenreButtons();
+  syncNewPhotoCheckButtons();
   updateActionLinks(record);
   renderScoreBars(document.getElementById('result-section'));
 }
@@ -6019,6 +6027,7 @@ async function saveFeedbackForLatest() {
         status: publicResponse && !localResponse ? '精度改善用として保存済み' : '保存済み',
       },
     };
+    latestResultRecord = updatedRecord;
     const activeUpload = getActiveUpload();
     if (activeUpload && activeUpload.recordId === updatedRecord.id) {
       activeUpload.evaluationResult = updatedRecord;
@@ -6029,6 +6038,7 @@ async function saveFeedbackForLatest() {
       });
       renderUploadQueue();
     }
+    syncNewPhotoCheckButtons(activeUpload);
     await saveToHistory(updatedRecord);
     void renderHistory().catch(error => {
       console.error(error);
