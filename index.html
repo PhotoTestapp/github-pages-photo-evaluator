@@ -1284,6 +1284,11 @@
   .modal-close:hover { background: var(--surface2); color: var(--text); }
   .modal-img { width: 100%; max-height: 200px; object-fit: contain; background: #000; display: block; }
   .modal-body { padding: 16px 18px 18px; }
+  #modal-box .total-card,
+  #modal-box .scores-grid,
+  #modal-box .ml-summary-card {
+    animation: none;
+  }
   #modal-box .total-card {
     padding: 22px 20px;
     margin-bottom: 14px;
@@ -2294,7 +2299,7 @@
           <div class="public-summary-value" id="local-stats-average-total">-</div>
         </article>
         <article class="public-summary-card">
-          <div class="public-summary-label">ジャンル正答率</div>
+          <div class="public-summary-label">カテゴリ正答率</div>
           <div class="public-summary-value" id="local-stats-genre-accuracy">-</div>
         </article>
       </div>
@@ -2308,11 +2313,11 @@
           <div id="local-genre-chart" class="public-bar-chart"></div>
         </article>
         <article class="public-chart-card">
-          <h2 class="public-chart-title">ユーザー選択カテゴリ</h2>
+          <h2 class="public-chart-title">選択カテゴリ</h2>
           <div id="local-feedback-genre-chart" class="public-bar-chart"></div>
         </article>
         <article class="public-chart-card">
-          <h2 class="public-chart-title">カテゴリ別ジャンル正答率</h2>
+          <h2 class="public-chart-title">カテゴリ別正答率</h2>
           <div id="local-genre-accuracy-chart" class="public-bar-chart"></div>
         </article>
         <article class="public-chart-card">
@@ -2449,7 +2454,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-n';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-r';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -3085,7 +3090,7 @@ async function exportLocalStatsPdf() {
   const summaryRows = [
     ['評価件数', `${Number(stats.summary?.totalRecords || 0)}件`],
     ['平均総合点', Number(stats.summary?.totalRecords || 0) ? `${Number(stats.summary?.averageTotalScore || 0).toFixed(1)}点` : '-'],
-    ['ジャンル正答率', Number(stats.summary?.genreFeedbackCount || 0) ? `${Number(stats.summary?.genreAccuracyRate || 0).toFixed(1)}%` : '-'],
+    ['カテゴリ正答率', Number(stats.summary?.genreFeedbackCount || 0) ? `${Number(stats.summary?.genreAccuracyRate || 0).toFixed(1)}%` : '-'],
   ];
   const getStatsRowLabel = row => {
     if (['composition', 'light', 'color', 'technical', 'subject', 'impact'].includes(row?.label)) {
@@ -3292,12 +3297,12 @@ async function exportLocalStatsPdf() {
       </div>
 
       <div class="section section-warm">
-        <h2>ユーザー選択カテゴリ</h2>
+        <h2>選択カテゴリ</h2>
         <table>${buildTableRows(stats.feedbackGenreCounts || [])}</table>
       </div>
 
       <div class="section section-navy">
-        <h2>カテゴリ別ジャンル正答率</h2>
+        <h2>カテゴリ別正答率</h2>
         <table>${(stats.genreAccuracyByLabel || []).length
           ? stats.genreAccuracyByLabel.map(row => `<tr><th>${escapeHtml(getPublicGenreLabel(row.label))}</th><td>${escapeHtml(`${Number(row.value || 0).toFixed(1)}% (${Number(row.correctCount || 0)}/${Number(row.totalCount || 0)})`)}</td></tr>`).join('')
           : '<tr><td colspan="2">データなし</td></tr>'}</table>
@@ -5568,15 +5573,15 @@ function buildMlSummaryHtml(record, options = {}) {
     ? selectedGenres.map(code => FEEDBACK_GENRE_LABELS[code] || getPublicGenreLabel(code)).join(' / ')
     : '未指定';
   const detailItems = compact ? [
-    ['方式', evaluationModeLabel],
+    ['判定方法', evaluationModeLabel],
     ['標準点', String(ruleScore)],
-    ['推定カテゴリ', categoryEstimateModeLabel ? `${estimatedGenreLabel}（${categoryEstimateModeLabel}）` : estimatedGenreLabel],
-    ['ユーザー指定カテゴリ', userGenreLabel],
+    ['自動判定カテゴリ', categoryEstimateModeLabel ? `${estimatedGenreLabel}（${categoryEstimateModeLabel}）` : estimatedGenreLabel],
+    ['選択カテゴリ', userGenreLabel],
   ] : [
-    ['現在のチェック方式', evaluationModeLabel],
+    ['判定方法', evaluationModeLabel],
     ['標準の総合点', String(ruleScore)],
     ['自動調整', `${Number.isFinite(record.scoreGap) ? record.scoreGap : 0}点`],
-    ['推定カテゴリ', categoryEstimateModeLabel ? `${estimatedGenreLabel}（${categoryEstimateModeLabel}）` : estimatedGenreLabel],
+    ['自動判定カテゴリ', categoryEstimateModeLabel ? `${estimatedGenreLabel}（${categoryEstimateModeLabel}）` : estimatedGenreLabel],
   ];
 
   return `
