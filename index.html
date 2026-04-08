@@ -3313,6 +3313,11 @@ async function exportLocalStatsPdf() {
           : '<tr><td colspan="2">データなし</td></tr>'}</table>
       </div>
 
+      <div class="section section-blue">
+        <h2>項目別平均</h2>
+        <table>${buildTableRows(stats.itemAverages || [], 'value', value => `${Number(value || 0).toFixed(1)}点`)}</table>
+      </div>
+
       <script>
         window.addEventListener('load', () => {
           setTimeout(() => {
