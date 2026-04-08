@@ -2308,7 +2308,7 @@
           </div>
           <div class="public-stats-actions">
             <button type="button" class="stats-action-btn apply" onclick="applyLocalStatsDateRange()">更新 期間を反映</button>
-            <button type="button" class="stats-action-btn export" onclick="exportLocalStatsPdf()">PDF 結果を出力</button>
+          <button type="button" class="stats-action-btn export" onclick="exportLocalStatsPdf()">PDF 結果を出力</button>
           </div>
         </div>
       </div>
@@ -2328,10 +2328,6 @@
       </div>
       <div class="public-stats-grid">
         <article class="public-chart-card">
-          <h2 class="public-chart-title">総合点ヒストグラム</h2>
-          <div id="local-score-histogram" class="public-histogram"></div>
-        </article>
-        <article class="public-chart-card">
           <h2 class="public-chart-title">自動判定カテゴリ</h2>
           <div id="local-genre-chart" class="public-bar-chart"></div>
         </article>
@@ -2342,10 +2338,6 @@
         <article class="public-chart-card">
           <h2 class="public-chart-title">カテゴリ別正答率</h2>
           <div id="local-genre-accuracy-chart" class="public-bar-chart"></div>
-        </article>
-        <article class="public-chart-card">
-          <h2 class="public-chart-title">項目別平均</h2>
-          <div id="local-item-averages" class="public-bar-chart"></div>
         </article>
       </div>
     </section>
@@ -2476,7 +2468,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-w';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-09-b';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -2995,7 +2987,6 @@ function buildLocalHistoryStats(records = [], options = {}) {
 
 function renderLocalHistoryStats(stats = {}) {
   latestLocalStatsSnapshot = stats;
-  renderPublicHistogram('local-score-histogram', stats.scoreHistogram || {});
   renderPublicBarChart('local-genre-chart', stats.genreCounts || [], {
     labelFormatter: getPublicGenreLabel,
   });
@@ -3007,12 +2998,6 @@ function renderLocalHistoryStats(stats = {}) {
     valueFormatter: value => `${round(Number(value || 0), 1).toFixed(1)}%`,
     maxValue: 100,
   });
-  renderPublicBarChart('local-item-averages', stats.itemAverages || [], {
-    labelFormatter: getPublicItemLabel,
-    valueFormatter: value => round(Number(value || 0), 1).toFixed(1),
-    maxValue: 100,
-  });
-
   const totalRecords = Number(stats.summary?.totalRecords || 0);
   const averageTotalScore = Number(stats.summary?.averageTotalScore || 0);
   const genreFeedbackCount = Number(stats.summary?.genreFeedbackCount || 0);
@@ -3049,11 +3034,9 @@ async function refreshLocalHistoryStats() {
   } catch (error) {
     console.error(error);
     const message = '<p class="public-stats-empty">この端末の統計を読み込めませんでした。</p>';
-    document.getElementById('local-score-histogram').innerHTML = message;
     document.getElementById('local-genre-chart').innerHTML = message;
     document.getElementById('local-feedback-genre-chart').innerHTML = message;
     document.getElementById('local-genre-accuracy-chart').innerHTML = message;
-    document.getElementById('local-item-averages').innerHTML = message;
     const note = document.getElementById('local-stats-note');
     if (note) note.textContent = 'この端末の統計を読み込めませんでした。';
   }
@@ -3330,10 +3313,6 @@ async function exportLocalStatsPdf() {
           : '<tr><td colspan="2">データなし</td></tr>'}</table>
       </div>
 
-      <div class="section section-blue">
-        <h2>項目別平均</h2>
-        <table>${buildTableRows(stats.itemAverages || [], 'value', value => `${Number(value || 0).toFixed(1)}点`)}</table>
-      </div>
       <script>
         window.addEventListener('load', () => {
           setTimeout(() => {
