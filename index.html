@@ -197,8 +197,11 @@
     border-color: rgba(120,162,230,0.82);
     color: #2f76ea;
   }
-  .public-collapsible-content[hidden] {
-    display: none !important;
+  .public-collapsible-content {
+    display: none;
+  }
+  .public-collapsible-content.expanded {
+    display: block;
   }
   .public-stats-controls {
     display: flex;
@@ -2325,9 +2328,9 @@
           <p class="public-stats-title">全体の統計</p>
           <p class="public-stats-note" id="public-stats-note"></p>
         </div>
-        <button type="button" class="public-collapse-toggle" id="public-stats-toggle" onclick="togglePublicStatsPanel()">全体の統計を表示</button>
+        <button type="button" class="public-collapse-toggle" id="public-stats-toggle">全体の統計を表示</button>
       </div>
-      <div class="public-collapsible-content" id="public-stats-content" hidden>
+      <div class="public-collapsible-content" id="public-stats-content">
         <div class="public-stats-mobile-tabs" id="public-stats-mobile-tabs">
           <button type="button" class="public-stats-mobile-tab active" onclick="showPublicStatsCard(0)">総合点</button>
           <button type="button" class="public-stats-mobile-tab" onclick="showPublicStatsCard(1)">カテゴリ</button>
@@ -2446,7 +2449,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-l';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-08-n';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -3342,13 +3345,25 @@ function togglePublicStatsPanel(forceExpanded = null) {
   const content = document.getElementById('public-stats-content');
   const button = document.getElementById('public-stats-toggle');
   if (!content || !button) return;
-  const nextExpanded = forceExpanded == null ? content.hidden : !forceExpanded;
-  content.hidden = nextExpanded;
-  const isExpanded = !content.hidden;
+  const isCurrentlyExpanded = content.classList.contains('expanded');
+  const shouldExpand = forceExpanded == null ? !isCurrentlyExpanded : Boolean(forceExpanded);
+  content.classList.toggle('expanded', shouldExpand);
+  content.style.display = shouldExpand ? 'block' : 'none';
+  const isExpanded = content.classList.contains('expanded');
   button.textContent = isExpanded ? '全体の統計を閉じる' : '全体の統計を表示';
 }
 
+function bindPublicStatsToggle() {
+  const button = document.getElementById('public-stats-toggle');
+  if (!button || button.dataset.boundClick === 'true') return;
+  button.addEventListener('click', () => {
+    togglePublicStatsPanel();
+  });
+  button.dataset.boundClick = 'true';
+}
+
 async function loadPublicStats() {
+  bindPublicStatsToggle();
   initializeLocalStatsDateInputs();
   await refreshLocalHistoryStats();
   try {
