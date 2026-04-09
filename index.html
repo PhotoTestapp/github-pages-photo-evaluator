@@ -2468,7 +2468,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-09-f';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-09-i';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -5811,7 +5811,7 @@ function buildFeedbackSectionHtml(record) {
               >${escapeHtml(option.label)}</button>
             `).join('')}
           </div>
-          <p class="feedback-note">「その他」を除いて2項目まで選べます。「その他」は単独選択です。保存時は内部コードで記録されます。</p>
+          <p class="feedback-note">「その他」を除いて2項目まで選べます。</p>
         </div>
       </div>
       <div class="feedback-actions">
@@ -5819,7 +5819,7 @@ function buildFeedbackSectionHtml(record) {
         <button class="btn-feedback" type="button" data-new-photo-check onclick="resetAll()" ${canStartNewPhotoCheck() ? '' : 'disabled'}>新しい写真をチェックする</button>
         <span class="feedback-status" id="feedback-status">${escapeHtml(feedback.status || '')}</span>
       </div>
-      <p class="feedback-note">保存されるのは点数や特徴量、補正点、写真の種類などです。画像そのものは精度改善用データに含まれません。</p>
+      <p class="feedback-note">保存されるのは点数や特徴量、補正点、写真の種類などです。画像そのものは保存されません。</p>
     </div>
   `;
 }
@@ -6030,7 +6030,6 @@ function buildLearningFeedbackPayload(record, feedback) {
       fileName: record.fileName || '',
       mimeType: record.imageMeta?.mimeType || '',
       size: Number(record.imageMeta?.fileSize || 0),
-      base64: record.originalFileHeaderBase64 || '',
     },
   };
 }
@@ -6087,6 +6086,7 @@ async function saveFeedbackForLatest() {
 
   try {
     const payload = buildLearningFeedbackPayload(latestResultRecord, feedback);
+    console.info('Feedback payload size', JSON.stringify(payload).length);
     const [localResult, publicResult] = await Promise.allSettled([
       apiRequest('/api/ml/feedback', {
         method: 'POST',
@@ -6131,14 +6131,6 @@ async function saveFeedbackForLatest() {
       renderUploadQueue();
     }
     syncNewPhotoCheckButtons(activeUpload);
-    await saveToHistory(updatedRecord);
-    enqueueDriveSave(updatedRecord, {
-      operation: updatedRecord.delivery?.driveFileId ? 'update' : 'create',
-      finalSave: true,
-    });
-    void renderHistory().catch(error => {
-      console.error(error);
-    });
     if (localResponse && publicResponse) {
       setFeedbackStatus('端末内と精度改善用の両方に保存しました', 'success');
     } else if (localResponse) {
@@ -6146,6 +6138,18 @@ async function saveFeedbackForLatest() {
     } else {
       setFeedbackStatus('精度改善用として保存しました', 'success');
     }
+    saveToHistory(updatedRecord).then(() => {
+      void renderHistory().catch(error => {
+        console.error(error);
+      });
+    }).catch(error => {
+      console.error('Feedback history save failed', error);
+      setFeedbackStatus('感想は送信しましたが、この端末の履歴保存に失敗しました', 'error');
+    });
+    enqueueDriveSave(updatedRecord, {
+      operation: updatedRecord.delivery?.driveFileId ? 'update' : 'create',
+      finalSave: true,
+    });
     setTimeout(() => {
       moveToNextUploadAfterFeedback().catch(error => {
         console.error(error);
