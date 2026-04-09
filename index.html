@@ -2468,7 +2468,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-09-c';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-09-e';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -2524,6 +2524,8 @@ const MAX_BATCH_UPLOADS = 5;
 const API_TIMEOUT_MS = 12000;
 const IMAGE_VALIDATION_MAX_BYTES = 256 * 1024;
 const DELIVERY_MAX_SIDE = 1920;
+const DRIVE_SAVE_MAX_CONCURRENCY = 3;
+const DRIVE_SAVE_MAX_RETRY_COUNT = 1;
 const ANALYSIS_MAX_SIDE_DESKTOP = 640;
 const ANALYSIS_MAX_SIDE_MOBILE = 384;
 const ANALYSIS_MAX_SIDE_MOBILE_AUTONEXT = 256;
@@ -2558,6 +2560,9 @@ let isEvaluationRunning = false;
 let isFeedbackSaving = false;
 let isUiLocked = false;
 let isProcessingSourceUploads = false;
+let activeDriveSaveCount = 0;
+let driveSaveRetryQueue = [];
+let activeDriveSaveRecordIds = new Set();
 let browserMlModelPromise = null;
 let mlRuntimeState = {
   mode: 'Rule-based',
@@ -3957,6 +3962,7 @@ function isUploadReadyForEvaluation(upload) {
     || (!isDriveSaveStrictMode() && (
       sourceState.driveSaveStatus === 'failed'
       || sourceState.driveSaveStatus === 'not_started'
+      || sourceState.driveSaveStatus === 'pending'
     ));
   return exifReady && driveReady;
 }
@@ -4160,7 +4166,7 @@ async function setFiles(files) {
     exifPromise: null,
     processingCache: createUploadProcessingCache(),
     sourceImageState: {
-      driveSaveStatus: collectDeliverySettings().autoSend ? 'pending' : 'not_started',
+      driveSaveStatus: 'not_started',
       userEvaluationStatus: 'pending',
       developerEvaluationStatus: 'pending',
       driveFileId: '',
@@ -5282,15 +5288,24 @@ async function requestMlPrediction(featureVector, ruleBasedScores) {
   }
 }
 
-function buildDeliveryPayload(record, imageBase64, settings) {
+function buildDeliveryPayload(record, imageBase64, settings, options = {}) {
+  const driveFileId = options.driveFileId || record.delivery?.driveFileId || '';
+  const operation = options.operation || (driveFileId ? 'update' : 'create');
   return {
     webhookKey: settings.webhookKey || '',
     destination: settings.target,
     toEmail: settings.email || '',
+    operation,
+    driveFileId,
+    updateExisting: operation === 'update' && Boolean(driveFileId),
+    recordId: record.id,
+    imageId: record.imageId || '',
+    uploadId: record.uploadId || '',
     fileName: record.fileName,
     createdAt: record.createdAt,
     imageBase64,
     imageContentType: 'image/jpeg',
+    feedback: record.feedback || {},
     evaluation: {
       compositionScore: record.compositionScore,
       lightScore: record.lightScore,
@@ -5341,7 +5356,7 @@ async function sendRecordToWebhook(record, options = {}) {
   if (validationError) throw new Error(validationError);
 
   const deliveryImage = options.deliveryImage || await resizeImageForDelivery(record.imageSrc);
-  const payload = buildDeliveryPayload(record, deliveryImage.base64, settings);
+  const payload = buildDeliveryPayload(record, deliveryImage.base64, settings, options);
   try {
     const response = await fetch(settings.webhookUrl, {
       method: 'POST',
@@ -5419,48 +5434,16 @@ function buildEarlyUploadRecord(upload, imageDataUrl) {
 }
 
 async function autoUploadSourceImageToDrive(upload) {
-  if (!upload || !collectDeliverySettings().autoSend) return;
-  const sourceState = upload.sourceImageState || {};
-  if (sourceState.driveSaveStatus === 'saved' || sourceState.driveSaveStatus === 'sending') return;
-
-  try {
-    patchUploadSourceImageState(upload, { driveSaveStatus: 'sending' });
-    renderUploadQueue();
-    const imageDataUrl = await ensureUploadOriginalDataUrl(upload);
-    const deliveryImage = await ensureUploadDeliveryImage(upload);
-    const response = await sendRecordToWebhook(
-      buildEarlyUploadRecord(upload, imageDataUrl),
-      { deliveryImage }
-    );
-    patchUploadSourceImageState(upload, {
-      driveSaveStatus: 'saved',
-      driveFileId: response.driveFileId || '',
-      driveUrl: response.driveUrl || '',
-    });
-  } catch (error) {
-    console.error(error);
-    patchUploadSourceImageState(upload, { driveSaveStatus: 'failed' });
-  } finally {
-    renderUploadQueue();
-    if (upload.id === currentUploadId) updateEvalButtonState(upload);
-  }
+  // 評価前保存は禁止。古い呼び出し口は評価済みレコードの非同期保存キューへ接続します。
+  if (!upload?.evaluationResult || !collectDeliverySettings().autoSend) return;
+  enqueueDriveSave(upload.evaluationResult, {
+    operation: upload.evaluationResult.delivery?.driveFileId ? 'update' : 'create',
+  });
 }
 
 async function processPendingSourceUploads() {
-  if (isProcessingSourceUploads || !collectDeliverySettings().autoSend) return;
-  isProcessingSourceUploads = true;
-  try {
-    for (const upload of uploadQueue) {
-      if (!uploadQueue.some(item => item.id === upload.id)) continue;
-      const state = upload.sourceImageState || {};
-      if (state.driveSaveStatus === 'saved' || state.driveSaveStatus === 'sending') continue;
-      await primeUploadProcessingCache(upload, { forDelivery: true, forAnalysis: false });
-      await autoUploadSourceImageToDrive(upload);
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
-  } finally {
-    isProcessingSourceUploads = false;
-  }
+  // Drive保存は評価後の非同期キューに集約します。アップロード直後の先保存は行いません。
+  return;
 }
 
 function buildAnalysisMeta(metrics, scores) {
@@ -5637,14 +5620,13 @@ async function runEvaluation(options = {}) {
     });
     renderUploadQueue();
     latestResultRecord = record;
-    await refreshRecordViews(record, { skipVisibleRender: true });
     if (!suppressIntermediateRender) {
       renderCurrentRecord(record);
     }
-
-    if (collectDeliverySettings().autoSend && !record.delivery.savedToDrive) {
-      await sendRecordById(record.id);
-    }
+    void refreshRecordViews(record, { skipVisibleRender: true }).catch(error => {
+      console.error(error);
+    });
+    enqueueDriveSave(record, { operation: 'create' });
   } catch (error) {
     console.error(error);
     showError(error.message || '写真の確認に失敗しました');
@@ -6112,6 +6094,10 @@ async function saveFeedbackForLatest() {
     }
     syncNewPhotoCheckButtons(activeUpload);
     await saveToHistory(updatedRecord);
+    enqueueDriveSave(updatedRecord, {
+      operation: updatedRecord.delivery?.driveFileId ? 'update' : 'create',
+      finalSave: true,
+    });
     void renderHistory().catch(error => {
       console.error(error);
     });
@@ -6566,9 +6552,221 @@ function buildDeliveryState(record, status, extra = {}) {
     driveFileId: extra.driveFileId ?? record.delivery?.driveFileId ?? '',
     emailed: extra.emailed ?? record.delivery?.emailed ?? false,
     savedToDrive: extra.savedToDrive ?? record.delivery?.savedToDrive ?? false,
+    operation: extra.operation ?? record.delivery?.operation ?? '',
     error: extra.error ?? '',
     sendError: extra.sendError ?? record.delivery?.sendError ?? '',
   };
+}
+
+function buildDriveSaveQueueKey(record, operation = '') {
+  return `${record?.id || record?.uploadId || 'unknown'}:${operation || (record?.delivery?.driveFileId ? 'update' : 'create')}`;
+}
+
+function findUploadForRecord(record) {
+  return uploadQueue.find(item => item.recordId === record?.id || item.id === record?.uploadId);
+}
+
+function enqueueDriveSave(record, options = {}) {
+  if (!record || !collectDeliverySettings().autoSend) return;
+  const operation = options.operation || (record.delivery?.driveFileId ? 'update' : 'create');
+  const upload = findUploadForRecord(record);
+  if (upload) {
+    patchUploadSourceImageState(upload, { driveSaveStatus: 'sending' });
+    renderUploadQueue();
+  }
+
+  const createKey = buildDriveSaveQueueKey(record, 'create');
+  if (options.finalSave && operation === 'create') {
+    const queuedCreateIndex = driveSaveRetryQueue.findIndex(item => item.key === createKey);
+    if (queuedCreateIndex >= 0) {
+      driveSaveRetryQueue[queuedCreateIndex] = {
+        ...driveSaveRetryQueue[queuedCreateIndex],
+        record,
+        finalSave: true,
+      };
+      void processDriveSaveRetryQueue();
+      return;
+    }
+  }
+
+  const queueItem = {
+    key: buildDriveSaveQueueKey(record, operation),
+    record,
+    operation,
+    retryCount: Number(options.retryCount || 0),
+    finalSave: Boolean(options.finalSave),
+  };
+  const existingIndex = driveSaveRetryQueue.findIndex(item => item.key === queueItem.key);
+  if (existingIndex >= 0) {
+    driveSaveRetryQueue[existingIndex] = queueItem;
+  } else {
+    driveSaveRetryQueue.push(queueItem);
+  }
+  void processDriveSaveRetryQueue();
+}
+
+async function processDriveSaveRetryQueue() {
+  while (activeDriveSaveCount < DRIVE_SAVE_MAX_CONCURRENCY && driveSaveRetryQueue.length) {
+    const nextIndex = driveSaveRetryQueue.findIndex(item => !activeDriveSaveRecordIds.has(String(item.record?.id || '')));
+    if (nextIndex < 0) return;
+    const [item] = driveSaveRetryQueue.splice(nextIndex, 1);
+    const activeRecordId = String(item.record?.id || '');
+    activeDriveSaveCount += 1;
+    if (activeRecordId) activeDriveSaveRecordIds.add(activeRecordId);
+    runDriveSaveQueueItem(item).finally(() => {
+      activeDriveSaveCount = Math.max(0, activeDriveSaveCount - 1);
+      if (activeRecordId) activeDriveSaveRecordIds.delete(activeRecordId);
+      if (driveSaveRetryQueue.length) {
+        void processDriveSaveRetryQueue();
+      }
+    });
+  }
+}
+
+async function runDriveSaveQueueItem(item) {
+  try {
+    const latestRecord = await getRecordById(item.record.id).catch(() => null);
+    const record = latestRecord || item.record;
+    if (item.operation === 'update') {
+      await updateDriveFile(record, { retryCount: item.retryCount, finalSave: item.finalSave });
+    } else {
+      await saveToDriveInitial(record, { retryCount: item.retryCount });
+    }
+  } catch (error) {
+    console.error('Drive save queue failed', error);
+  }
+}
+
+async function buildDeliveryImageForRecord(record) {
+  const upload = findUploadForRecord(record);
+  if (upload) {
+    return ensureUploadDeliveryImage(upload);
+  }
+  return resizeImageForDelivery(record.imageSrc);
+}
+
+async function applyDriveSaveSuccess(record, response, operation = 'create') {
+  const latestRecord = await getRecordById(record.id).catch(() => null);
+  const baseRecord = latestRecord || record;
+  const hadFeedback = Boolean(baseRecord.feedback?.savedAt);
+  const updatedRecord = {
+    ...baseRecord,
+    delivery: buildDeliveryState(baseRecord, 'success', {
+      target: collectDeliverySettings().target,
+      sent: true,
+      sentAt: new Date().toISOString(),
+      driveUrl: response.driveUrl || baseRecord.delivery?.driveUrl || '',
+      driveFileId: response.driveFileId || baseRecord.delivery?.driveFileId || '',
+      emailed: Boolean(response.emailed),
+      savedToDrive: Boolean(response.savedToDrive || response.driveFileId || baseRecord.delivery?.driveFileId),
+      error: '',
+      sendError: [response.driveError, response.emailError].filter(Boolean).join(' / '),
+      operation,
+    }),
+  };
+  const upload = findUploadForRecord(record);
+  if (upload) {
+    upload.evaluationResult = updatedRecord;
+    patchUploadSourceImageState(upload, {
+      driveSaveStatus: 'saved',
+      driveFileId: updatedRecord.delivery.driveFileId || '',
+      driveUrl: updatedRecord.delivery.driveUrl || '',
+    });
+    renderUploadQueue();
+  }
+  if (latestResultRecord?.id === updatedRecord.id) {
+    latestResultRecord = updatedRecord;
+  }
+  await refreshRecordViews(updatedRecord, { skipVisibleRender: true });
+  if (operation === 'create' && hadFeedback && updatedRecord.delivery?.driveFileId) {
+    enqueueDriveSave(updatedRecord, { operation: 'update', finalSave: true });
+  }
+  return updatedRecord;
+}
+
+async function applyDriveSaveFailure(record, error, options = {}) {
+  const latestRecord = await getRecordById(record.id).catch(() => null);
+  const baseRecord = latestRecord || record;
+  const updatedRecord = {
+    ...baseRecord,
+    delivery: buildDeliveryState(baseRecord, 'error', {
+      target: collectDeliverySettings().target,
+      sent: false,
+      sentAt: new Date().toISOString(),
+      error: error.message || '保存失敗',
+      sendError: error.message || '保存失敗',
+      savedToDrive: Boolean(baseRecord.delivery?.savedToDrive),
+    }),
+  };
+  const upload = findUploadForRecord(record);
+  if (upload) {
+    upload.evaluationResult = updatedRecord;
+    patchUploadSourceImageState(upload, { driveSaveStatus: 'failed' });
+    renderUploadQueue();
+  }
+  if (latestResultRecord?.id === updatedRecord.id) {
+    latestResultRecord = updatedRecord;
+  }
+  await refreshRecordViews(updatedRecord, { skipVisibleRender: true });
+  if (Number(options.retryCount || 0) < DRIVE_SAVE_MAX_RETRY_COUNT) {
+    enqueueDriveSave(updatedRecord, {
+      operation: options.operation || (updatedRecord.delivery?.driveFileId ? 'update' : 'create'),
+      retryCount: Number(options.retryCount || 0) + 1,
+      finalSave: Boolean(options.finalSave),
+    });
+  }
+  return updatedRecord;
+}
+
+async function saveToDriveInitial(record, options = {}) {
+  if (!record) return null;
+  const upload = findUploadForRecord(record);
+  if (upload) {
+    patchUploadSourceImageState(upload, { driveSaveStatus: 'sending' });
+    renderUploadQueue();
+  }
+  try {
+    const deliveryImage = await buildDeliveryImageForRecord(record);
+    const response = await sendRecordToWebhook(record, {
+      deliveryImage,
+      operation: record.delivery?.driveFileId ? 'update' : 'create',
+      driveFileId: record.delivery?.driveFileId || '',
+    });
+    return applyDriveSaveSuccess(record, response, record.delivery?.driveFileId ? 'update' : 'create');
+  } catch (error) {
+    console.error(error);
+    return applyDriveSaveFailure(record, error, {
+      operation: record.delivery?.driveFileId ? 'update' : 'create',
+      retryCount: options.retryCount || 0,
+    });
+  }
+}
+
+async function updateDriveFile(record, options = {}) {
+  if (!record) return null;
+  const driveFileId = record.delivery?.driveFileId || '';
+  const operation = driveFileId ? 'update' : 'create';
+  const upload = findUploadForRecord(record);
+  if (upload) {
+    patchUploadSourceImageState(upload, { driveSaveStatus: 'sending' });
+    renderUploadQueue();
+  }
+  try {
+    const deliveryImage = await buildDeliveryImageForRecord(record);
+    const response = await sendRecordToWebhook(record, {
+      deliveryImage,
+      operation,
+      driveFileId,
+    });
+    return applyDriveSaveSuccess(record, response, operation);
+  } catch (error) {
+    console.error(error);
+    return applyDriveSaveFailure(record, error, {
+      operation,
+      retryCount: options.retryCount || 0,
+      finalSave: true,
+    });
+  }
 }
 
 async function sendRecordById(id) {
@@ -6577,63 +6775,10 @@ async function sendRecordById(id) {
     console.warn('Delivery skipped: record not found', id);
     return;
   }
-
-  sendingRecordId = id;
-  const sendingRecord = { ...record, delivery: buildDeliveryState(record, 'sending') };
-  await refreshRecordViews(sendingRecord, { skipVisibleRender: true });
   hideError();
-
-  try {
-    const response = await sendRecordToWebhook(record);
-    const updatedRecord = {
-      ...record,
-      delivery: buildDeliveryState(record, 'success', {
-        target: collectDeliverySettings().target,
-        sent: true,
-        sentAt: new Date().toISOString(),
-        driveUrl: response.driveUrl || '',
-        driveFileId: response.driveFileId || '',
-        emailed: Boolean(response.emailed),
-        savedToDrive: Boolean(response.savedToDrive),
-        error: '',
-        sendError: [response.driveError, response.emailError].filter(Boolean).join(' / '),
-      }),
-    };
-    const upload = uploadQueue.find(item => item.recordId === id);
-    if (upload) {
-      upload.evaluationResult = updatedRecord;
-      if (upload.status === 'pending') upload.status = 'evaluated';
-      patchUploadSourceImageState(upload, {
-        driveSaveStatus: 'saved',
-        driveFileId: response.driveFileId || '',
-        driveUrl: response.driveUrl || '',
-      });
-      renderUploadQueue();
-    }
-    await refreshRecordViews(updatedRecord, { skipVisibleRender: true });
-  } catch (error) {
-    console.error(error);
-    const updatedRecord = {
-      ...record,
-      delivery: buildDeliveryState(record, 'error', {
-        target: collectDeliverySettings().target,
-        sent: false,
-        sentAt: new Date().toISOString(),
-        error: error.message || '保存失敗',
-        sendError: error.message || '保存失敗',
-      }),
-    };
-    const upload = uploadQueue.find(item => item.recordId === id || item.id === record.uploadId);
-    if (upload) {
-      patchUploadSourceImageState(upload, {
-        driveSaveStatus: 'failed',
-      });
-    }
-    await refreshRecordViews(updatedRecord, { skipVisibleRender: true });
-  } finally {
-    sendingRecordId = null;
-    if (latestResultRecord) updateActionLinks(latestResultRecord);
-  }
+  enqueueDriveSave(record, {
+    operation: record.delivery?.driveFileId ? 'update' : 'create',
+  });
 }
 
 async function sendLatestRecord() {
