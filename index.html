@@ -2468,7 +2468,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-09-e';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-09-f';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -3108,242 +3108,280 @@ async function exportLocalStatsPdf() {
     }
     return getPublicGenreLabel(row?.label);
   };
-  const buildTableRows = (rows, valueKey = 'count', formatter = value => String(value)) => rows.length
-    ? rows.map(row => `<tr><th>${escapeHtml(getStatsRowLabel(row))}</th><td>${escapeHtml(formatter(row[valueKey], row))}</td></tr>`).join('')
-    : '<tr><td colspan="2">データなし</td></tr>';
-  const html = `
-    <!doctype html>
-    <html lang="ja">
-    <head>
-      <meta charset="utf-8">
-      <title>端末統計レポート</title>
-      <style>
-        :root {
-          --ink: #1f2a44;
-          --muted: #5f6f89;
-          --line: #cfd9ea;
-          --panel: #f7fbff;
-          --panel-strong: #e8f1ff;
-          --brand: #2f76ea;
-          --brand-soft: #dceaff;
-          --accent: #0f9d7a;
-          --accent-soft: #dff7ef;
-          --warm: #ffb347;
-          --warm-soft: #fff2d9;
-        }
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-          margin: 32px;
-          color: var(--ink);
-          background:
-            linear-gradient(180deg, #f7fbff 0%, #ffffff 26%, #ffffff 100%);
-        }
-        .hero {
-          background: linear-gradient(135deg, #2f76ea, #69b2ff);
-          color: #ffffff;
-          border-radius: 22px;
-          padding: 24px 26px 20px;
-          box-shadow: 0 16px 34px rgba(47, 118, 234, 0.16);
-        }
-        h1 { font-size: 24px; margin: 0 0 8px; letter-spacing: 0.02em; }
-        p { margin: 0 0 8px; color: var(--muted); }
-        .hero p { color: rgba(255,255,255,0.9); }
-        .summary-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 12px;
-          margin-top: 18px;
-        }
-        .summary-card {
-          background: rgba(255,255,255,0.9);
-          color: var(--ink);
-          border-radius: 16px;
-          padding: 14px 16px;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
-        }
-        .summary-label {
-          font-size: 12px;
-          color: var(--muted);
-          margin-bottom: 6px;
-          letter-spacing: 0.04em;
-        }
-        .summary-value {
-          font-size: 20px;
-          font-weight: 800;
-          color: var(--brand);
-        }
-        .section {
-          margin-top: 22px;
-          background: var(--panel);
-          border: 1px solid var(--line);
-          border-radius: 18px;
-          padding: 18px 18px 16px;
-        }
-        h2 {
-          font-size: 16px;
-          margin: 0 0 12px;
-          color: var(--ink);
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .section-blue h2::before,
-        .section-green h2::before,
-        .section-warm h2::before,
-        .section-navy h2::before {
-          content: '';
-          width: 10px;
-          height: 10px;
-          border-radius: 999px;
-          display: inline-block;
-        }
-        .section-blue h2::before { background: var(--brand); }
-        .section-green h2::before { background: var(--accent); }
-        .section-warm h2::before { background: var(--warm); }
-        .section-navy h2::before { background: #35538f; }
-        .section-blue { background: linear-gradient(180deg, var(--panel-strong), #ffffff); }
-        .section-green { background: linear-gradient(180deg, var(--accent-soft), #ffffff); }
-        .section-warm { background: linear-gradient(180deg, var(--warm-soft), #ffffff); }
-        .section-navy { background: linear-gradient(180deg, #e8eefc, #ffffff); }
-        .actions {
-          margin: 18px 0 24px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          flex-wrap: wrap;
-          background: #edf5ff;
-          border: 1px solid #c9dcff;
-          border-radius: 16px;
-          padding: 14px 16px;
-        }
-        .actions-note {
-          font-size: 13px;
-          color: #476485;
-          font-weight: 600;
-        }
-        .actions button {
-          padding: 12px 18px;
-          border: 1px solid #2f76ea;
-          border-radius: 12px;
-          background: linear-gradient(135deg, #2f76ea, #69b2ff);
-          color: #ffffff;
-          cursor: pointer;
-          font: inherit;
-          font-weight: 700;
-          box-shadow: 0 10px 22px rgba(47, 118, 234, 0.22);
-          letter-spacing: 0.02em;
-        }
-        .actions button:hover {
-          filter: brightness(1.03);
-        }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; overflow: hidden; border-radius: 12px; }
-        th, td {
-          border: 1px solid var(--line);
-          padding: 10px 12px;
-          font-size: 13px;
-          text-align: left;
-          vertical-align: top;
-        }
-        th {
-          width: 42%;
-          background: rgba(255,255,255,0.82);
-          color: var(--ink);
-        }
-        td {
-          background: rgba(255,255,255,0.94);
-        }
-        .summary th { width: 28%; }
-        .section-blue .summary-value { color: var(--brand); }
-        .section-green .summary-value { color: var(--accent); }
-        .section-warm .summary-value { color: #c98518; }
-        @media (max-width: 720px) {
-          body { margin: 18px; }
-          .hero { padding: 18px 18px 16px; }
-          .summary-grid { grid-template-columns: 1fr; }
-          .actions {
-            align-items: stretch;
-          }
-          .actions button {
-            width: 100%;
-          }
-        }
-        @media print {
-          .actions { display: none; }
-          body { margin: 16px; background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .hero, .section { box-shadow: none; }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="hero">
-        <h1>この端末の集計レポート</h1>
-        <p>集計期間: ${escapeHtml(rangeLabel)}</p>
-        <p>出力日時: ${escapeHtml(formatStatsGeneratedAt(new Date().toISOString()))}</p>
-        <div class="summary-grid">
-          ${summaryRows.map(([label, value]) => `
-            <div class="summary-card">
-              <div class="summary-label">${escapeHtml(label)}</div>
-              <div class="summary-value">${escapeHtml(value)}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-      <div class="actions">
-        <div class="actions-note">右の青いボタンからPDF保存または印刷を実行できます。</div>
-        <button type="button" onclick="window.print()">PDFとして保存 / 印刷</button>
-      </div>
-
-      <div class="section section-blue">
-        <h2>概要</h2>
-        <table class="summary">
-          ${summaryRows.map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('')}
-        </table>
-      </div>
-
-      <div class="section section-green">
-        <h2>自動判定カテゴリ</h2>
-        <table>${buildTableRows(stats.genreCounts || [])}</table>
-      </div>
-
-      <div class="section section-warm">
-        <h2>選択カテゴリ</h2>
-        <table>${buildTableRows(stats.feedbackGenreCounts || [])}</table>
-      </div>
-
-      <div class="section section-navy">
-        <h2>カテゴリ別正答率</h2>
-        <table>${(stats.genreAccuracyByLabel || []).length
-          ? stats.genreAccuracyByLabel.map(row => `<tr><th>${escapeHtml(getPublicGenreLabel(row.label))}</th><td>${escapeHtml(`${Number(row.value || 0).toFixed(1)}% (${Number(row.correctCount || 0)}/${Number(row.totalCount || 0)})`)}</td></tr>`).join('')
-          : '<tr><td colspan="2">データなし</td></tr>'}</table>
-      </div>
-
-      <div class="section section-blue">
-        <h2>項目別平均</h2>
-        <table>${buildTableRows(stats.itemAverages || [], 'value', value => `${Number(value || 0).toFixed(1)}点`)}</table>
-      </div>
-
-      <script>
-        window.addEventListener('load', () => {
-          setTimeout(() => {
-            try { window.print(); } catch (error) {}
-          }, 250);
-        });
-      <\/script>
-    </body>
-    </html>
-  `;
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const reportUrl = URL.createObjectURL(blob);
-  const printWindow = window.open(reportUrl, '_blank');
-  if (!printWindow) {
-    URL.revokeObjectURL(reportUrl);
-    showError('PDF出力用の画面を開けませんでした');
-    return;
+  const report = {
+    title: 'この端末の集計レポート',
+    rangeLabel,
+    generatedAt: formatStatsGeneratedAt(new Date().toISOString()),
+    summaryRows,
+    sections: [
+      { title: '概要', tone: 'blue', rows: summaryRows },
+      { title: '自動判定カテゴリ', tone: 'green', rows: (stats.genreCounts || []).map(row => [getStatsRowLabel(row), `${Number(row.count || 0)}件`]) },
+      { title: '選択カテゴリ', tone: 'warm', rows: (stats.feedbackGenreCounts || []).map(row => [getStatsRowLabel(row), `${Number(row.count || 0)}件`]) },
+      {
+        title: 'カテゴリ別正答率',
+        tone: 'navy',
+        rows: (stats.genreAccuracyByLabel || []).map(row => [
+          getPublicGenreLabel(row.label),
+          `${Number(row.value || 0).toFixed(1)}% (${Number(row.correctCount || 0)}/${Number(row.totalCount || 0)})`,
+        ]),
+      },
+      { title: '項目別平均', tone: 'blue', rows: (stats.itemAverages || []).map(row => [getStatsRowLabel(row), `${Number(row.value || 0).toFixed(1)}点`]) },
+    ],
+  };
+  try {
+    const pages = await buildLocalStatsPdfPages(report);
+    const pdfBlob = buildPdfFromJpegPages(pages);
+    downloadBlob(pdfBlob, buildLocalStatsPdfFileName(startDate, endDate), 'application/pdf');
+  } catch (error) {
+    console.error(error);
+    showError('PDFファイルの作成に失敗しました');
   }
-  setTimeout(() => {
-    URL.revokeObjectURL(reportUrl);
-  }, 60_000);
+}
+
+function buildLocalStatsPdfFileName(startDate = '', endDate = '') {
+  const start = startDate || 'all';
+  const end = endDate || start;
+  return `photo-eval-local-stats-${start}-${end}.pdf`;
+}
+
+function downloadBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+function roundRectPath(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+function fillRoundRect(ctx, x, y, width, height, radius, fillStyle) {
+  ctx.save();
+  ctx.fillStyle = fillStyle;
+  roundRectPath(ctx, x, y, width, height, radius);
+  ctx.fill();
+  ctx.restore();
+}
+
+function strokeRoundRect(ctx, x, y, width, height, radius, strokeStyle, lineWidth = 2) {
+  ctx.save();
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineWidth = lineWidth;
+  roundRectPath(ctx, x, y, width, height, radius);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function wrapCanvasText(ctx, text, maxWidth) {
+  const source = String(text || '-');
+  const lines = [];
+  let line = '';
+  for (const char of source) {
+    const nextLine = `${line}${char}`;
+    if (line && ctx.measureText(nextLine).width > maxWidth) {
+      lines.push(line);
+      line = char;
+    } else {
+      line = nextLine;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : ['-'];
+}
+
+function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 4) {
+  const lines = wrapCanvasText(ctx, text, maxWidth).slice(0, maxLines);
+  lines.forEach((line, index) => {
+    ctx.fillText(line, x, y + index * lineHeight);
+  });
+  return lines.length * lineHeight;
+}
+
+async function buildLocalStatsPdfPages(report) {
+  const width = 1240;
+  const height = 1754;
+  const margin = 80;
+  const contentWidth = width - margin * 2;
+  const pages = [];
+  let canvas = null;
+  let ctx = null;
+  let cursorY = margin;
+  const tones = {
+    blue: { bg: '#e8f1ff', line: '#c9dcff', accent: '#2f76ea' },
+    green: { bg: '#dff7ef', line: '#bfe9dc', accent: '#0f9d7a' },
+    warm: { bg: '#fff2d9', line: '#f2d49a', accent: '#c98518' },
+    navy: { bg: '#e8eefc', line: '#c8d3ef', accent: '#35538f' },
+  };
+  const newPage = () => {
+    canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = '#f7fbff';
+    ctx.fillRect(0, 0, width, 220);
+    cursorY = margin;
+    pages.push(canvas);
+  };
+  const ensureSpace = needed => {
+    if (cursorY + needed > height - margin) {
+      newPage();
+    }
+  };
+  const drawHeader = () => {
+    fillRoundRect(ctx, margin, cursorY, contentWidth, 250, 34, '#2f76ea');
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 44px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(report.title, margin + 36, cursorY + 64);
+    ctx.font = '500 24px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(`集計期間: ${report.rangeLabel}`, margin + 36, cursorY + 112);
+    ctx.fillText(`出力日時: ${report.generatedAt}`, margin + 36, cursorY + 152);
+    const cardGap = 18;
+    const cardWidth = (contentWidth - 72 - cardGap * 2) / 3;
+    report.summaryRows.forEach(([label, value], index) => {
+      const x = margin + 36 + index * (cardWidth + cardGap);
+      const y = cursorY + 176;
+      fillRoundRect(ctx, x, y, cardWidth, 56, 16, 'rgba(255,255,255,0.92)');
+      ctx.fillStyle = '#5f6f89';
+      ctx.font = '700 16px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(label, x + 18, y + 24);
+      ctx.fillStyle = '#2f76ea';
+      ctx.font = '800 24px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(value, x + 18, y + 48);
+    });
+    cursorY += 290;
+  };
+  const drawSection = section => {
+    const rows = section.rows?.length ? section.rows : [['データなし', '-']];
+    const tone = tones[section.tone] || tones.blue;
+    const rowHeight = 58;
+    const titleHeight = 58;
+    const sectionHeight = titleHeight + rows.length * rowHeight + 34;
+    ensureSpace(Math.min(sectionHeight, height - margin * 2));
+    fillRoundRect(ctx, margin, cursorY, contentWidth, titleHeight, 22, tone.bg);
+    strokeRoundRect(ctx, margin, cursorY, contentWidth, titleHeight, 22, tone.line, 2);
+    ctx.fillStyle = tone.accent;
+    ctx.beginPath();
+    ctx.arc(margin + 32, cursorY + 29, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1f2a44';
+    ctx.font = '800 26px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(section.title, margin + 54, cursorY + 38);
+    cursorY += titleHeight + 10;
+    rows.forEach(([label, value], index) => {
+      ensureSpace(rowHeight + 18);
+      const y = cursorY;
+      ctx.fillStyle = index % 2 === 0 ? '#ffffff' : '#f8fbff';
+      ctx.fillRect(margin, y, contentWidth, rowHeight);
+      ctx.strokeStyle = '#d7e1ef';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(margin, y, contentWidth, rowHeight);
+      ctx.fillStyle = '#1f2a44';
+      ctx.font = '700 21px -apple-system, BlinkMacSystemFont, sans-serif';
+      drawWrappedText(ctx, label, margin + 22, y + 35, contentWidth * 0.42, 24, 2);
+      ctx.fillStyle = '#31435f';
+      ctx.font = '500 21px -apple-system, BlinkMacSystemFont, sans-serif';
+      drawWrappedText(ctx, value, margin + contentWidth * 0.5, y + 35, contentWidth * 0.45, 24, 2);
+      cursorY += rowHeight;
+    });
+    cursorY += 28;
+  };
+  newPage();
+  drawHeader();
+  report.sections.forEach(drawSection);
+  pages.forEach((page, index) => {
+    const pageCtx = page.getContext('2d');
+    pageCtx.fillStyle = '#7a8798';
+    pageCtx.font = '500 18px -apple-system, BlinkMacSystemFont, sans-serif';
+    pageCtx.fillText(`${index + 1} / ${pages.length}`, width - margin - 60, height - 36);
+  });
+  return pages.map(page => ({
+    width,
+    height,
+    dataUrl: page.toDataURL('image/jpeg', 0.92),
+  }));
+}
+
+function dataUrlToUint8Array(dataUrl) {
+  const base64 = dataUrl.split(',')[1] || '';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function asciiToUint8Array(text) {
+  const bytes = new Uint8Array(text.length);
+  for (let i = 0; i < text.length; i += 1) {
+    bytes[i] = text.charCodeAt(i) & 0xff;
+  }
+  return bytes;
+}
+
+function concatUint8Arrays(parts) {
+  const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
+  const output = new Uint8Array(totalLength);
+  let offset = 0;
+  parts.forEach(part => {
+    output.set(part, offset);
+    offset += part.length;
+  });
+  return output;
+}
+
+function buildPdfFromJpegPages(pages) {
+  const pageWidthPt = 595.28;
+  const pageHeightPt = 841.89;
+  const objects = [];
+  const pageObjectIds = [];
+  pages.forEach((page, index) => {
+    const imageObjectId = 3 + index * 3;
+    const contentObjectId = imageObjectId + 1;
+    const pageObjectId = imageObjectId + 2;
+    const imageBytes = dataUrlToUint8Array(page.dataUrl);
+    const imageHeader = asciiToUint8Array(`${imageObjectId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`);
+    const imageFooter = asciiToUint8Array('\nendstream\nendobj\n');
+    const content = `q\n${pageWidthPt} 0 0 ${pageHeightPt} 0 0 cm\n/Im${index + 1} Do\nQ`;
+    const contentBytes = asciiToUint8Array(`${contentObjectId} 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`);
+    const pageBytes = asciiToUint8Array(`${pageObjectId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidthPt} ${pageHeightPt}] /Resources << /XObject << /Im${index + 1} ${imageObjectId} 0 R >> >> /Contents ${contentObjectId} 0 R >>\nendobj\n`);
+    objects.push(concatUint8Arrays([imageHeader, imageBytes, imageFooter]));
+    objects.push(contentBytes);
+    objects.push(pageBytes);
+    pageObjectIds.push(pageObjectId);
+  });
+  const header = asciiToUint8Array('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  const catalog = asciiToUint8Array('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  const pagesObject = asciiToUint8Array(`2 0 obj\n<< /Type /Pages /Kids [${pageObjectIds.map(id => `${id} 0 R`).join(' ')}] /Count ${pageObjectIds.length} >>\nendobj\n`);
+  const chunks = [header, catalog, pagesObject];
+  const offsets = [0, header.length, header.length + catalog.length];
+  objects.forEach(objectBytes => {
+    offsets.push(chunks.reduce((sum, part) => sum + part.length, 0));
+    chunks.push(objectBytes);
+  });
+  const body = concatUint8Arrays(chunks);
+  const xrefOffset = body.length;
+  const objectCount = objects.length + 3;
+  let xref = `xref\n0 ${objectCount}\n0000000000 65535 f \n`;
+  for (let i = 1; i < objectCount; i += 1) {
+    xref += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+  }
+  xref += `trailer\n<< /Size ${objectCount} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return new Blob([body, asciiToUint8Array(xref)], { type: 'application/pdf' });
 }
 
 function showPublicStatsCard(index = 0) {
