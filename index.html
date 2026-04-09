@@ -2468,7 +2468,7 @@ const STORAGE_KEYS = {
   anonymousUserId: 'photo_eval_anonymous_user_id',
 };
 // Always bump this label for every public UI change on the same day: a, b, ... z, aa, ab ...
-const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-09-b';
+const PUBLIC_UI_VERSION = 'PUBLIC_UI v2026-04-09-c';
 const PUBLIC_STATS_PATH = './photo_eval_public_stats.json';
 const PUBLIC_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEEDBACK_GENRE_OPTIONS = [
@@ -3944,14 +3944,20 @@ function persistCurrentFeedbackDraft() {
   activeUpload.feedbackDraft = collectFeedbackFormValues();
 }
 
+function isDriveSaveStrictMode() {
+  return false;
+}
+
 function isUploadReadyForEvaluation(upload) {
   if (!upload) return false;
   const exifReady = upload.exifStatus === 'loaded' || upload.exifStatus === 'failed';
   const sourceState = upload.sourceImageState || {};
   const driveReady = !collectDeliverySettings().autoSend
     || sourceState.driveSaveStatus === 'saved'
-    || sourceState.driveSaveStatus === 'failed'
-    || sourceState.driveSaveStatus === 'not_started';
+    || (!isDriveSaveStrictMode() && (
+      sourceState.driveSaveStatus === 'failed'
+      || sourceState.driveSaveStatus === 'not_started'
+    ));
   return exifReady && driveReady;
 }
 
@@ -3985,7 +3991,7 @@ async function selectUploadItem(uploadId) {
   currentUploadId = upload.id;
   currentFile = upload.file;
   currentFileUrl = upload.previewUrl;
-  currentFileDataUrl = upload.dataUrl || '';
+  currentFileDataUrl = upload.processingCache?.originalDataUrl || upload.dataUrl || '';
   document.getElementById('preview-img').src = upload.dataUrl || upload.previewUrl;
   document.getElementById('preview-name').textContent = upload.file.name;
   document.getElementById('dropzone').style.display = 'none';
@@ -4007,6 +4013,7 @@ async function selectUploadItem(uploadId) {
   if (upload.exifStatus === 'idle') {
     void preloadExifMetadataForUpload(upload);
   }
+  void primeUploadProcessingCache(upload, { forDelivery: true, forAnalysis: true });
   void processPendingSourceUploads();
 }
 
@@ -4151,6 +4158,7 @@ async function setFiles(files) {
     exifMetadata: null,
     exifStatus: 'idle',
     exifPromise: null,
+    processingCache: createUploadProcessingCache(),
     sourceImageState: {
       driveSaveStatus: collectDeliverySettings().autoSend ? 'pending' : 'not_started',
       userEvaluationStatus: 'pending',
@@ -4206,6 +4214,76 @@ function readFileAsDataURL(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function createUploadProcessingCache() {
+  return {
+    originalDataUrl: '',
+    deliveryImageDataUrl: '',
+    deliveryImageBase64: '',
+    deliveryImageMeta: null,
+    analysisImageDataUrl: '',
+    analysisBundle: null,
+    analysisMaxSide: 0,
+  };
+}
+
+async function ensureUploadOriginalDataUrl(upload) {
+  if (!upload) return '';
+  upload.processingCache ||= createUploadProcessingCache();
+  if (upload.processingCache.originalDataUrl) return upload.processingCache.originalDataUrl;
+  const dataUrl = upload.dataUrl || await readFileAsDataURL(upload.file);
+  upload.dataUrl = dataUrl;
+  upload.processingCache.originalDataUrl = dataUrl;
+  return dataUrl;
+}
+
+async function ensureUploadDeliveryImage(upload) {
+  if (!upload) return null;
+  upload.processingCache ||= createUploadProcessingCache();
+  if (upload.processingCache.deliveryImageDataUrl && upload.processingCache.deliveryImageBase64) {
+    return {
+      dataUrl: upload.processingCache.deliveryImageDataUrl,
+      base64: upload.processingCache.deliveryImageBase64,
+      width: Number(upload.processingCache.deliveryImageMeta?.width || 0),
+      height: Number(upload.processingCache.deliveryImageMeta?.height || 0),
+    };
+  }
+  const originalDataUrl = await ensureUploadOriginalDataUrl(upload);
+  const deliveryImage = await resizeImageForDelivery(originalDataUrl);
+  upload.processingCache.deliveryImageDataUrl = deliveryImage.dataUrl;
+  upload.processingCache.deliveryImageBase64 = deliveryImage.base64;
+  upload.processingCache.deliveryImageMeta = {
+    width: deliveryImage.width,
+    height: deliveryImage.height,
+  };
+  return deliveryImage;
+}
+
+async function ensureUploadAnalysisBundle(upload, maxSide = getAnalysisMaxSide()) {
+  if (!upload) return null;
+  upload.processingCache ||= createUploadProcessingCache();
+  if (upload.processingCache.analysisBundle && upload.processingCache.analysisMaxSide === maxSide) {
+    return upload.processingCache.analysisBundle;
+  }
+  const originalDataUrl = await ensureUploadOriginalDataUrl(upload);
+  const bundle = await buildAnalysisImageBundle(originalDataUrl, maxSide);
+  upload.processingCache.analysisImageDataUrl = originalDataUrl;
+  upload.processingCache.analysisBundle = bundle;
+  upload.processingCache.analysisMaxSide = maxSide;
+  return bundle;
+}
+
+async function primeUploadProcessingCache(upload, options = {}) {
+  if (!upload) return;
+  const {
+    forDelivery = true,
+    forAnalysis = false,
+    analysisMaxSide = getAnalysisMaxSide(),
+  } = options;
+  await ensureUploadOriginalDataUrl(upload);
+  if (forDelivery) await ensureUploadDeliveryImage(upload);
+  if (forAnalysis) await ensureUploadAnalysisBundle(upload, analysisMaxSide);
 }
 
 function readFileAsArrayBuffer(file) {
@@ -5257,12 +5335,12 @@ async function resizeImageForDelivery(source) {
   };
 }
 
-async function sendRecordToWebhook(record) {
+async function sendRecordToWebhook(record, options = {}) {
   const settings = collectDeliverySettings();
   const validationError = validateDeliverySettings(settings);
   if (validationError) throw new Error(validationError);
 
-  const deliveryImage = await resizeImageForDelivery(record.imageSrc);
+  const deliveryImage = options.deliveryImage || await resizeImageForDelivery(record.imageSrc);
   const payload = buildDeliveryPayload(record, deliveryImage.base64, settings);
   try {
     const response = await fetch(settings.webhookUrl, {
@@ -5348,9 +5426,12 @@ async function autoUploadSourceImageToDrive(upload) {
   try {
     patchUploadSourceImageState(upload, { driveSaveStatus: 'sending' });
     renderUploadQueue();
-    const imageDataUrl = upload.dataUrl || await readFileAsDataURL(upload.file);
-    upload.dataUrl = imageDataUrl;
-    const response = await sendRecordToWebhook(buildEarlyUploadRecord(upload, imageDataUrl));
+    const imageDataUrl = await ensureUploadOriginalDataUrl(upload);
+    const deliveryImage = await ensureUploadDeliveryImage(upload);
+    const response = await sendRecordToWebhook(
+      buildEarlyUploadRecord(upload, imageDataUrl),
+      { deliveryImage }
+    );
     patchUploadSourceImageState(upload, {
       driveSaveStatus: 'saved',
       driveFileId: response.driveFileId || '',
@@ -5373,6 +5454,7 @@ async function processPendingSourceUploads() {
       if (!uploadQueue.some(item => item.id === upload.id)) continue;
       const state = upload.sourceImageState || {};
       if (state.driveSaveStatus === 'saved' || state.driveSaveStatus === 'sending') continue;
+      await primeUploadProcessingCache(upload, { forDelivery: true, forAnalysis: false });
       await autoUploadSourceImageToDrive(upload);
       await new Promise(resolve => setTimeout(resolve, 0));
     }
@@ -5438,10 +5520,16 @@ async function runEvaluation(options = {}) {
 
   try {
     const fileForEvaluation = currentFile;
-    const imageData = currentFileDataUrl || await readFileAsDataURL(fileForEvaluation);
+    const processingCache = activeUpload.processingCache || (activeUpload.processingCache = createUploadProcessingCache());
+    const analysisBundle = processingCache.analysisBundle && processingCache.analysisMaxSide === analysisMaxSide
+      ? processingCache.analysisBundle
+      : await ensureUploadAnalysisBundle(activeUpload, analysisMaxSide);
+    const imageData = processingCache.analysisImageDataUrl
+      || processingCache.originalDataUrl
+      || currentFileDataUrl
+      || await readFileAsDataURL(fileForEvaluation);
     activeUpload.dataUrl = imageData;
     currentFileDataUrl = imageData;
-    const analysisBundle = await buildAnalysisImageBundle(imageData, analysisMaxSide);
     const analysis = await analyzeImageFile(fileForEvaluation, imageData, analysisBundle);
     const ruleBasedScores = { ...analysis.scores };
     const featureVector = buildFeatureVector(analysis.metrics, ruleBasedScores);
